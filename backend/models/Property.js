@@ -1,6 +1,4 @@
-const express = require('express');
 const mongoose = require('mongoose');
-const app = express();
 
 const propertySchema = new mongoose.Schema({
     name: { 
@@ -34,6 +32,5 @@ const propertySchema = new mongoose.Schema({
         default: Date.now 
     }
 });
-
 
 module.exports = mongoose.model('Property', propertySchema);

@@ -45,7 +45,7 @@ const connectDB = async () => {
 };
 
 // Connect to database
-connectDB();
+
 
 // Mount property routes
 app.use('/api/properties', propertyRoutes);
