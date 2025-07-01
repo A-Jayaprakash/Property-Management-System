@@ -3,13 +3,13 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
-const path = require('path'); // ADD THIS LINE
+const path = require('path');
 
 // Load environment variables from .env file
 dotenv.config();
 
 // Import custom modules
-const propertyRoutes = require('./routes/propertyRoutes'); // FIXED PATH
+const propertyRoutes = require('./routes/propertyRoutes');
 
 // Initialize Express app
 const app = express();
@@ -17,11 +17,11 @@ const app = express();
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
-// CORS configuration (SINGLE CORS SETUP)
+// CORS configuration
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
         ? ['https://your-domain.com'] 
-        : ['http://localhost:3000', 'http://127.0.0.1:5500'] // Added local dev origins
+        : ['http://localhost:3000', 'http://127.0.0.1:5500']
 }));
 
 // MongoDB connection
@@ -44,8 +44,8 @@ const connectDB = async () => {
     }
 };
 
-// Connect to database
-
+// Connect to database - THIS WAS MISSING!
+connectDB();
 
 // Mount property routes
 app.use('/api/properties', propertyRoutes);
@@ -55,12 +55,12 @@ app.get('/', (req, res) => {
     res.send('Property Management System API is running...');
 });
 
-// Production middleware (MOVED TO END)
+// Production middleware (serve static files)
 if (process.env.NODE_ENV === 'production') {
-    app.use(express.static('frontend'));
+    app.use(express.static(path.join(__dirname, '../frontend')));
     
     app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+        res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
     });
 }
 

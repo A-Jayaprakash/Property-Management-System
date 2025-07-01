@@ -3,8 +3,11 @@
   "version": "1.0.0",
   "scripts": {
     "install-backend": "cd backend && npm install",
-    "install-frontend": "cd frontend && npm install",
-    "build": "npm run install-backend && npm run install-frontend",
-    "start": "cd backend && npm start"
+    "build": "npm run install-backend",
+    "start": "cd backend && npm start",
+    "dev": "cd backend && npm run dev"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }
