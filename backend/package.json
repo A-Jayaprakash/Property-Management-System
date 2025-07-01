@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -21,5 +18,13 @@
     "nodemon": "^3.1.10",
     "pug": "^3.0.3",
     "puh": "^1.0.0"
+  },
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "build": "echo 'No build step required'"
+  },
+  "engines": {
+    "node": "18.x"
   }
 }

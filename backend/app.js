@@ -40,6 +40,22 @@ const connectDB = async () => {
     }
 };
 
+// Production middleware
+if (process.env.NODE_ENV === 'production') {
+    app.use(express.static('frontend'));
+    
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+    });
+}
+
+// CORS for production
+app.use(cors({
+    origin: process.env.NODE_ENV === 'production' 
+        ? ['https://your-domain.com'] 
+        : ['http://localhost:3000']
+}));
+
 connectDB();
 
 // Mount property routes

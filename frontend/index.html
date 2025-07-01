@@ -117,7 +117,10 @@
       // Global variables
       let properties = [];
       let currentEditId = null;
-      const API_BASE_URL = "http://localhost:3000/api/properties";
+      const API_BASE_URL =
+        window.location.hostname === "localhost"
+          ? "http://localhost:3000/api/properties"
+          : "/api/properties"; // For same-domain deployment
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", function () {
