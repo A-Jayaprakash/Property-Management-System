@@ -1,0 +1,32 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+    border: 1px solid black;
+}
+#headerText {
+    text-align: center;
+}
+.username {
+    margin-top: 20px;
+    border: 1px solid black;
+}
+#username {
+    padding: 8px;
+    margin-left: 120px;
+    width: 50%;
+}
+.password{
+    border: 1px solid black;
+    margin-top: 20px;
+}
+#password{
+    padding: 8px;
+    margin-left: 120px;
+    width: 50%;
+}

@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,14 +7,18 @@
     <title>Property Management System</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
+
   <body>
     <div class="container">
+      <!-- This section is for the header of property CRUD module -->
       <div class="header">
         <h1>Property Management System</h1>
         <p>Manage your properties efficiently and effectively</p>
       </div>
 
+      <!-- This section is for the actions which can be performed by the user in the property CRUD module -->
       <div class="actions-bar">
+        <!-- This is the search box -->
         <div class="search-box">
           <input
             type="text"
@@ -21,7 +26,10 @@
             placeholder="Search properties..."
           />
         </div>
+
+        <!-- This is the flex box which holds the Theme and Add button -->
         <div style="display: flex; gap: 15px; align-items: center">
+          <!-- Theme Button -->
           <button
             class="btn theme-toggle-btn"
             id="themeToggle"
@@ -31,6 +39,8 @@
             <span id="themeIcon">🌙</span>
             <span id="themeText">Dark Mode</span>
           </button>
+
+          <!-- Add Property Button -->
           <button class="btn btn-primary" onclick="openAddModal()">
             ➕ Add New Property
           </button>
@@ -48,10 +58,12 @@
     <!-- Add/Edit Property Modal -->
     <div id="propertyModal" class="modal">
       <div class="modal-content">
+        <!-- Modal Header -->
         <div class="modal-header">
           <h2 id="modalTitle">Add New Property</h2>
           <span class="close" onclick="closeModal()">&times;</span>
         </div>
+
         <div class="modal-body">
           <form id="propertyForm">
             <div class="form-group">

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Register</title>
+    <link rel="stylesheet" href="register.css" />
+  </head>
+  <body>
+    <div class="register-container">
+      <h2>Register</h2>
+      <form id="registerForm">
+        <input type="text" id="name" placeholder="Name" required />
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="password" id="password" placeholder="Password" required />
+        <select id="role">
+          <option value="tenant" selected>Tenant</option>
+          <option value="manager">Manager</option>
+          <!-- Do not expose admin here unless needed -->
+        </select>
+        <button type="submit">Register</button>
+      </form>
+      <div class="message" id="message"></div>
+    </div>
+
+    <script>
+      const registerForm = document.getElementById("registerForm");
+      const messageDiv = document.getElementById("message");
+
+      registerForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const name = document.getElementById("name").value;
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+        const role = document.getElementById("role").value;
+
+        try {
+          const res = await fetch("http://localhost:3000/api/auth/register", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ name, username, password, role }),
+          });
+
+          const data = await res.json();
+
+          if (!res.ok) {
+            messageDiv.style.color = "red";
+            messageDiv.textContent = data.message || "Registration failed";
+            return;
+          }
+
+          messageDiv.style.color = "green";
+          messageDiv.textContent = data.message;
+          alert("Registration successful! You can now login.");
+          // Optionally redirect to login
+          // location.href = "login.html";
+        } catch (error) {
+          console.error("Error during registration:", error);
+          messageDiv.style.color = "red";
+          messageDiv.textContent = "Server error. Try again.";
+        }
+      });
+    </script>
+  </body>
+</html>
