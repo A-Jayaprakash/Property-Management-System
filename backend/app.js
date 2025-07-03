@@ -17,13 +17,21 @@ const app = express();
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
-// CORS configuration - Fixed for development
+// CORS configuration - Fixed for development and production
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://your-domain.com'] 
-        : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://127.0.0.1:3000'],
-    credentials: true
+        ? ['https://your-domain.com', 'https://your-app.onrender.com'] // Add your production domains here
+        : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://127.0.0.1:3000', 'http://localhost:8080'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Add request logging middleware for debugging
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+    next();
+});
 
 // MongoDB connection
 const connectDB = async () => {
@@ -48,22 +56,28 @@ const connectDB = async () => {
 // Connect to database
 connectDB();
 
-// Mount property routes
-app.use('/api/properties', propertyRoutes);
-
 // Health check endpoint
 app.get('/', (req, res) => {
     res.json({ message: 'Property Management System API is running...', status: 'OK' });
 });
 
+// Mount property routes
+app.use('/api/properties', propertyRoutes);
+
 // Production middleware (serve static files)
 if (process.env.NODE_ENV === 'production') {
     app.use(express.static(path.join(__dirname, '../frontend')));
     
+    // Handle React routing, return all requests to React app
     app.get('*', (req, res) => {
         res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
     });
 }
+
+// 404 handler for API routes
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ message: 'API endpoint not found' });
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -78,7 +92,8 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 // Start the server
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`MongoDB URI: ${process.env.MONGO_URI ? 'Connected' : 'Not configured'}`);
 });
