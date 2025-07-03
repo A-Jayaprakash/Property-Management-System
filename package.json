@@ -2,8 +2,8 @@
   "name": "property-management-system",
   "version": "1.0.0",
   "scripts": {
-    "start": "node /backend/app.js",
-    "dev": "nodemon /backend/app.js",
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js",
     "build": "echo 'No build step required'"
   },
   "engines": {
