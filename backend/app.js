@@ -44,7 +44,7 @@ const connectDB = async () => {
     }
 };
 
-// Connect to database - THIS WAS MISSING!
+// Connect to database
 connectDB();
 
 // Mount property routes
