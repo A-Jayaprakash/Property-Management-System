@@ -1,3 +1,18 @@
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+
+    // Update button icon and text
+    const icon = document.getElementById('themeIcon');
+    const text = document.getElementById('themeText');
+    if (theme === 'dark') {
+        icon.textContent = '🌞';
+        text.textContent = 'Light Mode';
+    } else {
+        icon.textContent = '🌙';
+        text.textContent = 'Dark Mode';
+    }
+}
+
 function initializeTheme() {
     let savedTheme = null;
     try {
