@@ -30,9 +30,11 @@ app.use(cors({
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 
-app.get('*', (req, res) => {
+// Only serve index.html for routes that are NOT API calls
+app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
+
 
 // Add request logging middleware for debugging
 app.use((req, res, next) => {
