@@ -1,15 +1,22 @@
 function initializeTheme() {
-    // Check if user has a theme preference in localStorage
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    let savedTheme = null;
+    try {
+        savedTheme = localStorage.getItem('theme');
+    } catch (e) {
+        console.warn('localStorage not available');
+    }
     
-    // Set initial theme
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     const initialTheme = savedTheme || (prefersDark ? 'dark' : 'light');
     setTheme(initialTheme);
     
     // Listen for system theme changes
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-        if (!localStorage.getItem('theme')) {
+        try {
+            if (!localStorage.getItem('theme')) {
+                setTheme(e.matches ? 'dark' : 'light');
+            }
+        } catch (err) {
             setTheme(e.matches ? 'dark' : 'light');
         }
     });
@@ -21,7 +28,11 @@ function toggleTheme() {
     setTheme(newTheme);
     
     // Save user preference
-    localStorage.setItem('theme', newTheme);
+    try {
+        localStorage.setItem('theme', newTheme);
+    } catch (e) {
+        console.warn('Could not save theme preference');
+    }
     
     // Add a subtle animation effect
     document.body.style.transition = 'all 0.3s ease';
@@ -29,26 +40,3 @@ function toggleTheme() {
         document.body.style.transition = '';
     }, 300);
 }
-
-function setTheme(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    updateThemeToggleButton(theme);
-}
-
-function updateThemeToggleButton(theme) {
-    const themeIcon = document.getElementById('themeIcon');
-    const themeText = document.getElementById('themeText');
-    
-    if (theme === 'dark') {
-        themeIcon.textContent = '☀️';
-        themeText.textContent = 'Light Mode';
-    } else {
-        themeIcon.textContent = '🌙';
-        themeText.textContent = 'Dark Mode';
-    }
-}
-
-// Initialize theme when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTheme();
-});

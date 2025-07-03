@@ -20,7 +20,7 @@ app.use(express.json());
 // CORS configuration - Fixed for development and production
 app.use(cors({
     origin: process.env.NODE_ENV === 'production' 
-        ? ['https://your-domain.com', 'https://your-app.onrender.com'] // Add your production domains here
+        ? ['https://your-app-name.onrender.com', 'https://your-custom-domain.com'] // Replace with your actual domains
         : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://127.0.0.1:3000', 'http://localhost:8080'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
