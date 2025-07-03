@@ -117,16 +117,30 @@
       // Global variables
       let properties = [];
       let currentEditId = null;
-      const API_BASE_URL =
-        window.location.hostname === "localhost"
-          ? "http://localhost:3000/api/properties"
-          : "/api/properties"; // For same-domain deployment
+
+      // Better API URL detection
+      const getAPIBaseURL = () => {
+        if (
+          window.location.hostname === "localhost" ||
+          window.location.hostname === "127.0.0.1"
+        ) {
+          return "http://localhost:3000/api/properties";
+        } else {
+          // For production, use the same origin
+          return `${window.location.protocol}//${window.location.host}/api/properties`;
+        }
+      };
+
+      const API_BASE_URL = getAPIBaseURL();
+
+      console.log("API Base URL:", API_BASE_URL);
 
       // Initialize the application
       document.addEventListener("DOMContentLoaded", function () {
         loadProperties();
         setupSearchListener();
         setupFormListener();
+        initializeTheme();
       });
 
       window.onclick = function (event) {
