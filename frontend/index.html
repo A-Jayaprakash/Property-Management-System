@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Property Management System</title>
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="styles/index.css" />
   </head>
 
   <body>
@@ -149,172 +149,12 @@
 
       console.log("API Base URL:", API_BASE_URL);
 
-      // Function to get auth headers for API calls
-      function getAuthHeaders() {
-        const token = sessionStorage.getItem("authToken");
-        if (!token) {
-          throw new Error("No authentication token found");
-        }
-        return {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        };
-      }
-
-      // Function to check authentication
-      function checkAuthentication() {
-        const token = sessionStorage.getItem("authToken");
-        const userDataStr = sessionStorage.getItem("userData");
-
-        if (!token || !userDataStr) {
-          console.log("No authentication data found, redirecting to login");
-          window.location.href = "login.html";
-          return false;
-        }
-
-        try {
-          const userData = JSON.parse(userDataStr);
-
-          // Store globally for easy access
-          authToken = token;
-          window.userData = {
-            token: token,
-            user: userData,
-          };
-
-          isAuthenticated = true;
-          return true;
-        } catch (error) {
-          console.error("Error parsing user data:", error);
-          // Clear invalid data and redirect to login
-          sessionStorage.removeItem("authToken");
-          sessionStorage.removeItem("userData");
-          window.location.href = "login.html";
-          return false;
-        }
-      }
-
-      // Function to verify token validity (optional, can be called separately)
-      async function verifyTokenValidity() {
-        if (!authToken) {
-          console.log("No token to verify");
-          return false;
-        }
-
-        try {
-          const response = await fetch(API_BASE_URL, {
-            method: "GET",
-            headers: getAuthHeaders(),
-          });
-
-          if (!response.ok) {
-            throw new Error("Token invalid or expired");
-          }
-
-          console.log("Token verified successfully");
-          return true;
-        } catch (error) {
-          console.error("Token verification failed:", error);
-          // Clear invalid token and redirect to login
-          sessionStorage.removeItem("authToken");
-          sessionStorage.removeItem("userData");
-          window.location.href = "login.html";
-          return false;
-        }
-      }
-
-      // Logout function
       function logout() {
         sessionStorage.removeItem("authToken");
         sessionStorage.removeItem("userData");
         authToken = null;
         isAuthenticated = false;
         window.location.href = "login.html";
-      }
-
-      // Enhanced load properties function with proper error handling
-      async function loadProperties() {
-        if (!isAuthenticated) {
-          console.log("Not authenticated, cannot load properties");
-          return;
-        }
-
-        const loadingIndicator = document.getElementById("loadingIndicator");
-        const errorMessage = document.getElementById("errorMessage");
-        const successMessage = document.getElementById("successMessage");
-
-        try {
-          // Show loading
-          if (loadingIndicator) {
-            loadingIndicator.style.display = "block";
-          }
-
-          // Clear previous messages
-          if (errorMessage) {
-            errorMessage.style.display = "none";
-            errorMessage.textContent = "";
-          }
-          if (successMessage) {
-            successMessage.style.display = "none";
-            successMessage.textContent = "";
-          }
-
-          console.log(
-            "Loading properties with token:",
-            authToken ? "Present" : "Missing"
-          );
-
-          const response = await fetch(API_BASE_URL, {
-            method: "GET",
-            headers: getAuthHeaders(),
-          });
-
-          if (!response.ok) {
-            if (response.status === 401) {
-              throw new Error("Authentication failed. Please login again.");
-            }
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-
-          const data = await response.json();
-          properties = data || [];
-
-          console.log("Properties loaded successfully:", properties.length);
-
-          // Call render function if it exists
-          if (typeof renderProperties === "function") {
-            renderProperties(properties);
-          }
-
-          // Hide loading
-          if (loadingIndicator) {
-            loadingIndicator.style.display = "none";
-          }
-        } catch (error) {
-          console.error("Error loading properties:", error);
-
-          // Hide loading
-          if (loadingIndicator) {
-            loadingIndicator.style.display = "none";
-          }
-
-          // Show error message
-          if (errorMessage) {
-            errorMessage.textContent = `Failed to load properties: ${error.message}`;
-            errorMessage.style.display = "block";
-          }
-
-          // If authentication error, redirect to login
-          if (
-            error.message.includes("Authentication failed") ||
-            error.message.includes("No token provided") ||
-            error.message.includes("No authentication token found")
-          ) {
-            setTimeout(() => {
-              logout();
-            }, 2000);
-          }
-        }
       }
 
       // Initialize the application
@@ -344,120 +184,25 @@
           closeModal();
         }
       };
-
-      // Enhanced API call wrapper with authentication
-      async function makeAuthenticatedRequest(url, options = {}) {
-        if (!isAuthenticated) {
-          throw new Error("Not authenticated");
-        }
-
-        const defaultOptions = {
-          headers: getAuthHeaders(),
-        };
-
-        const mergedOptions = {
-          ...defaultOptions,
-          ...options,
-          headers: {
-            ...defaultOptions.headers,
-            ...options.headers,
-          },
-        };
-
-        const response = await fetch(url, mergedOptions);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            // Token expired or invalid
-            logout();
-            throw new Error("Authentication expired. Please login again.");
-          }
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        return response;
-      }
-
-      // Example usage for other API calls (you can use this pattern in your other script files)
-      async function createProperty(propertyData) {
-        try {
-          const response = await makeAuthenticatedRequest(API_BASE_URL, {
-            method: "POST",
-            body: JSON.stringify(propertyData),
-          });
-          return await response.json();
-        } catch (error) {
-          console.error("Error creating property:", error);
-          throw error;
-        }
-      }
-
-      async function updateProperty(id, propertyData) {
-        try {
-          const response = await makeAuthenticatedRequest(
-            `${API_BASE_URL}/${id}`,
-            {
-              method: "PUT",
-              body: JSON.stringify(propertyData),
-            }
-          );
-          return await response.json();
-        } catch (error) {
-          console.error("Error updating property:", error);
-          throw error;
-        }
-      }
-
-      async function deleteProperty(id) {
-        try {
-          const response = await makeAuthenticatedRequest(
-            `${API_BASE_URL}/${id}`,
-            {
-              method: "DELETE",
-            }
-          );
-          return await response.json();
-        } catch (error) {
-          console.error("Error deleting property:", error);
-          throw error;
-        }
-      }
-
-      // Add a logout button functionality (you can add this to your UI)
-      function addLogoutButton() {
-        // This is optional - you can add a logout button to your UI
-        const logoutBtn = document.createElement("button");
-        logoutBtn.textContent = "Logout";
-        logoutBtn.onclick = logout;
-        logoutBtn.style.cssText = `
-          position: fixed;
-          top: 10px;
-          right: 10px;
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 8px 16px;
-          border-radius: 4px;
-          cursor: pointer;
-          z-index: 1000;
-        `;
-        document.body.appendChild(logoutBtn);
-      }
     </script>
-    <script src="escapeHTML.js"></script>
-    <script src="showLoading.js"></script>
-    <script src="showError.js"></script>
-    <script src="showSuccess.js"></script>
-    <script src="openModal.js"></script>
-    <script src="closeModal.js"></script>
-    <script src="formListener.js"></script>
-    <script src="formSubmit.js"></script>
-    <script src="searchListener.js"></script>
-    <script src="filterProperties.js"></script>
-    <script src="loadProperties.js"></script>
-    <script src="deleteProperty.js"></script>
-    <script src="renderProperties.js"></script>
-    <script src="editProperty.js"></script>
-    <script src="toggleTheme.js"></script>
+    <script src="property/escapeHTML.js"></script>
+    <script src="property/showLoading.js"></script>
+    <script src="property/showError.js"></script>
+    <script src="property/showSuccess.js"></script>
+    <script src="property/openModal.js"></script>
+    <script src="property/closeModal.js"></script>
+    <script src="property/formListener.js"></script>
+    <script src="property/formSubmit.js"></script>
+    <script src="property/searchListener.js"></script>
+    <script src="property/filterProperties.js"></script>
+    <script src="property/loadProperties.js"></script>
+    <script src="property/deleteProperty.js"></script>
+    <script src="property/renderProperties.js"></script>
+    <script src="property/editProperty.js"></script>
+    <script src="property/toggleTheme.js"></script>
+    <script src="auth/checkAuthentication.js"></script>
+    <script src="auth/makeAuthenticatedRequest.js"></script>
+    <script src="auth/getAuthHeaders.js"></script>
+    <script src="auth/verifyTokenValidity.js"></script>
   </body>
 </html>

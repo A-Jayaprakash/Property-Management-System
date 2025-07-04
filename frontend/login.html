@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - Property Management System</title>
-    <link rel="stylesheet" href="login.css" />
+    <link rel="stylesheet" href="styles/login.css" />
   </head>
   <body>
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -49,43 +49,14 @@
     </div>
 
     <script>
-      // Theme Management
-      function toggleTheme() {
-        const currentTheme =
-          document.documentElement.getAttribute("data-theme");
-        const newTheme = currentTheme === "dark" ? "light" : "dark";
-        document.documentElement.setAttribute("data-theme", newTheme);
-
-        // Update button text
-        const themeBtn = document.querySelector(".theme-toggle");
-        themeBtn.textContent = newTheme === "dark" ? "☀️" : "🌙";
-
-        // Store theme preference (using a simple variable instead of localStorage)
-        window.currentTheme = newTheme;
-      }
-
-      // Initialize theme
       document.addEventListener("DOMContentLoaded", function () {
-        // Set default theme
         document.documentElement.setAttribute("data-theme", "light");
         window.currentTheme = "light";
       });
 
-      // Form handling
       const loginForm = document.getElementById("loginForm");
       const messageDiv = document.getElementById("message");
       const loginBtn = document.getElementById("loginBtn");
-
-      function showMessage(text, type = "error") {
-        messageDiv.textContent = text;
-        messageDiv.className = `message ${type}`;
-        messageDiv.style.display = "block";
-
-        // Hide message after 5 seconds
-        setTimeout(() => {
-          messageDiv.style.display = "none";
-        }, 5000);
-      }
 
       loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -130,5 +101,7 @@
         }
       });
     </script>
+    <script src="property/toggleTheme.js"></script>
+    <script src="auth/showMessage.js"></script>
   </body>
 </html>
