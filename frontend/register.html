@@ -5,6 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register - Property Management System</title>
     <link rel="stylesheet" href="register.css" />
+    <style>
+      /* Enhanced password validation styles */
+      .password-requirements {
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 6px;
+        padding: 12px;
+        margin-top: 8px;
+        font-size: 12px;
+      }
+
+      .requirement {
+        display: flex;
+        align-items: center;
+        margin: 4px 0;
+        color: #6c757d;
+      }
+
+      .requirement.met {
+        color: #28a745;
+      }
+
+      .requirement.not-met {
+        color: #dc3545;
+      }
+
+      .requirement-icon {
+        margin-right: 6px;
+        font-weight: bold;
+      }
+
+      .password-strength {
+        margin-top: 8px;
+        height: 4px;
+        background: #e9ecef;
+        border-radius: 2px;
+        overflow: hidden;
+      }
+
+      .password-strength-bar {
+        height: 100%;
+        transition: width 0.3s ease, background-color 0.3s ease;
+      }
+
+      .strength-weak {
+        background-color: #dc3545;
+      }
+      .strength-fair {
+        background-color: #fd7e14;
+      }
+      .strength-good {
+        background-color: #ffc107;
+      }
+      .strength-strong {
+        background-color: #28a745;
+      }
+
+      .password-strength-text {
+        font-size: 11px;
+        margin-top: 4px;
+        font-weight: 500;
+      }
+
+      .compromised-password-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin-top: 8px;
+        font-size: 12px;
+        display: none;
+      }
+
+      [data-theme="dark"] .password-requirements {
+        background: #2d3748;
+        border-color: #4a5568;
+      }
+
+      [data-theme="dark"] .compromised-password-warning {
+        background: #744210;
+        border-color: #975a16;
+        color: #fbb6ce;
+      }
+    </style>
   </head>
   <body>
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -45,7 +130,54 @@
             id="password"
             placeholder="Create a secure password"
             required
-            minlength="8"
+            minlength="12"
+          />
+
+          <div class="password-requirements" id="passwordRequirements">
+            <div class="requirement" id="req-length">
+              <span class="requirement-icon">○</span>
+              <span>At least 12 characters long</span>
+            </div>
+            <div class="requirement" id="req-uppercase">
+              <span class="requirement-icon">○</span>
+              <span>Contains uppercase letter (A-Z)</span>
+            </div>
+            <div class="requirement" id="req-lowercase">
+              <span class="requirement-icon">○</span>
+              <span>Contains lowercase letter (a-z)</span>
+            </div>
+            <div class="requirement" id="req-number">
+              <span class="requirement-icon">○</span>
+              <span>Contains number (0-9)</span>
+            </div>
+            <div class="requirement" id="req-special">
+              <span class="requirement-icon">○</span>
+              <span>Contains special character (@$!%*?&)</span>
+            </div>
+            <div class="requirement" id="req-no-common">
+              <span class="requirement-icon">○</span>
+              <span>Not a common password</span>
+            </div>
+
+            <div class="password-strength">
+              <div class="password-strength-bar" id="strengthBar"></div>
+            </div>
+            <div class="password-strength-text" id="strengthText"></div>
+          </div>
+
+          <div class="compromised-password-warning" id="compromisedWarning">
+            ⚠️ This password appears in known data breaches. Please choose a
+            different password.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="confirmPassword">Confirm Password</label>
+          <input
+            type="password"
+            id="confirmPassword"
+            placeholder="Confirm your password"
+            required
           />
         </div>
 
@@ -74,6 +206,44 @@
     </div>
 
     <script>
+      // Common passwords list (subset for demonstration)
+      const commonPasswords = [
+        "password",
+        "123456",
+        "123456789",
+        "qwerty",
+        "abc123",
+        "password123",
+        "admin",
+        "letmein",
+        "welcome",
+        "monkey",
+        "1234567890",
+        "password1",
+        "qwertyuiop",
+        "123123",
+        "dragon",
+        "master",
+        "hello",
+        "login",
+        "welcome123",
+        "admin123",
+        "root",
+        "toor",
+        "pass",
+        "test",
+        "guest",
+        "user",
+        "password12",
+        "password!",
+        "Password123",
+        "Password1",
+        "p@ssw0rd",
+        "p@ssword",
+        "passw0rd",
+        "Password@123",
+      ];
+
       // Theme Management
       function toggleTheme() {
         const currentTheme =
@@ -112,27 +282,238 @@
         }, 5000);
       }
 
-      // Password validation
+      // Enhanced password validation
       function validatePassword(password) {
-        const minLength = 8;
-        const hasUpperCase = /[A-Z]/.test(password);
-        const hasLowerCase = /[a-z]/.test(password);
-        const hasNumbers = /\d/.test(password);
+        const requirements = {
+          length: password.length >= 12,
+          uppercase: /[A-Z]/.test(password),
+          lowercase: /[a-z]/.test(password),
+          number: /\d/.test(password),
+          special: /[@$!%*?&]/.test(password),
+          noCommon: !commonPasswords.includes(password.toLowerCase()),
+          noSequential: !hasSequentialChars(password),
+          noRepeated: !hasRepeatedChars(password),
+        };
 
-        if (password.length < minLength) {
-          return "Password must be at least 8 characters long";
+        const errors = [];
+        if (!requirements.length)
+          errors.push("Password must be at least 12 characters long");
+        if (!requirements.uppercase)
+          errors.push("Password must contain at least one uppercase letter");
+        if (!requirements.lowercase)
+          errors.push("Password must contain at least one lowercase letter");
+        if (!requirements.number)
+          errors.push("Password must contain at least one number");
+        if (!requirements.special)
+          errors.push(
+            "Password must contain at least one special character (@$!%*?&)"
+          );
+        if (!requirements.noCommon)
+          errors.push("Password is too common, please choose a different one");
+        if (!requirements.noSequential)
+          errors.push(
+            "Password should not contain sequential characters (e.g., 123, abc)"
+          );
+        if (!requirements.noRepeated)
+          errors.push(
+            "Password should not contain repeated characters (e.g., aaa, 111)"
+          );
+
+        return {
+          isValid: errors.length === 0,
+          errors: errors,
+          requirements: requirements,
+          strength: calculatePasswordStrength(password, requirements),
+        };
+      }
+
+      // Check for sequential characters
+      function hasSequentialChars(password) {
+        const sequences = [
+          "abcdefghijklmnopqrstuvwxyz",
+          "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          "0123456789",
+          "qwertyuiopasdfghjklzxcvbnm",
+        ];
+
+        for (let seq of sequences) {
+          for (let i = 0; i <= seq.length - 3; i++) {
+            if (password.includes(seq.substr(i, 3))) {
+              return true;
+            }
+          }
         }
-        if (!hasUpperCase) {
-          return "Password must contain at least one uppercase letter";
+        return false;
+      }
+
+      // Check for repeated characters
+      function hasRepeatedChars(password) {
+        for (let i = 0; i < password.length - 2; i++) {
+          if (
+            password[i] === password[i + 1] &&
+            password[i] === password[i + 2]
+          ) {
+            return true;
+          }
         }
-        if (!hasLowerCase) {
-          return "Password must contain at least one lowercase letter";
+        return false;
+      }
+
+      // Calculate password strength
+      function calculatePasswordStrength(password, requirements) {
+        let score = 0;
+        let maxScore = 8;
+
+        // Basic requirements
+        if (requirements.length) score++;
+        if (requirements.uppercase) score++;
+        if (requirements.lowercase) score++;
+        if (requirements.number) score++;
+        if (requirements.special) score++;
+        if (requirements.noCommon) score++;
+        if (requirements.noSequential) score++;
+        if (requirements.noRepeated) score++;
+
+        // Bonus points for length
+        if (password.length >= 16) score += 1;
+        if (password.length >= 20) score += 1;
+        maxScore += 2;
+
+        // Bonus for character diversity
+        const uniqueChars = new Set(password).size;
+        if (uniqueChars >= password.length * 0.8) score += 1;
+        maxScore += 1;
+
+        const percentage = (score / maxScore) * 100;
+
+        if (percentage < 40)
+          return { level: "weak", text: "Weak", percentage: percentage };
+        if (percentage < 60)
+          return { level: "fair", text: "Fair", percentage: percentage };
+        if (percentage < 80)
+          return { level: "good", text: "Good", percentage: percentage };
+        return { level: "strong", text: "Strong", percentage: percentage };
+      }
+
+      // Update password requirements display
+      function updatePasswordRequirements(password) {
+        const validation = validatePassword(password);
+        const requirements = validation.requirements;
+
+        // Update requirement indicators
+        updateRequirement("req-length", requirements.length);
+        updateRequirement("req-uppercase", requirements.uppercase);
+        updateRequirement("req-lowercase", requirements.lowercase);
+        updateRequirement("req-number", requirements.number);
+        updateRequirement("req-special", requirements.special);
+        updateRequirement("req-no-common", requirements.noCommon);
+
+        // Update strength bar
+        const strengthBar = document.getElementById("strengthBar");
+        const strengthText = document.getElementById("strengthText");
+        const strength = validation.strength;
+
+        strengthBar.style.width = `${strength.percentage}%`;
+        strengthBar.className = `password-strength-bar strength-${strength.level}`;
+        strengthText.textContent = `Password strength: ${strength.text}`;
+        strengthText.style.color = getStrengthColor(strength.level);
+
+        // Show/hide compromised password warning
+        const compromisedWarning =
+          document.getElementById("compromisedWarning");
+        compromisedWarning.style.display = !requirements.noCommon
+          ? "block"
+          : "none";
+      }
+
+      function updateRequirement(id, met) {
+        const element = document.getElementById(id);
+        const icon = element.querySelector(".requirement-icon");
+
+        if (met) {
+          element.className = "requirement met";
+          icon.textContent = "✓";
+        } else {
+          element.className = "requirement not-met";
+          icon.textContent = "○";
         }
-        if (!hasNumbers) {
-          return "Password must contain at least one number";
+      }
+
+      function getStrengthColor(level) {
+        switch (level) {
+          case "weak":
+            return "#dc3545";
+          case "fair":
+            return "#fd7e14";
+          case "good":
+            return "#ffc107";
+          case "strong":
+            return "#28a745";
+          default:
+            return "#6c757d";
+        }
+      }
+
+      // Password confirmation validation
+      function validatePasswordConfirmation(password, confirmPassword) {
+        if (password !== confirmPassword) {
+          return "Passwords do not match";
         }
         return null;
       }
+
+      // Real-time password validation
+      document
+        .getElementById("password")
+        .addEventListener("input", function (e) {
+          const password = e.target.value;
+
+          if (password.length > 0) {
+            updatePasswordRequirements(password);
+            const validation = validatePassword(password);
+
+            if (!validation.isValid) {
+              e.target.setCustomValidity(validation.errors[0]);
+            } else {
+              e.target.setCustomValidity("");
+            }
+          } else {
+            // Reset requirements display
+            document.getElementById("passwordRequirements").style.display =
+              "none";
+            e.target.setCustomValidity("");
+          }
+        });
+
+      // Show/hide password requirements
+      document
+        .getElementById("password")
+        .addEventListener("focus", function () {
+          document.getElementById("passwordRequirements").style.display =
+            "block";
+        });
+
+      // Confirm password validation
+      document
+        .getElementById("confirmPassword")
+        .addEventListener("input", function (e) {
+          const password = document.getElementById("password").value;
+          const confirmPassword = e.target.value;
+
+          if (confirmPassword.length > 0) {
+            const error = validatePasswordConfirmation(
+              password,
+              confirmPassword
+            );
+            if (error) {
+              e.target.setCustomValidity(error);
+            } else {
+              e.target.setCustomValidity("");
+            }
+          } else {
+            e.target.setCustomValidity("");
+          }
+        });
 
       registerForm.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -140,6 +521,8 @@
         const name = document.getElementById("name").value.trim();
         const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
+        const confirmPassword =
+          document.getElementById("confirmPassword").value;
         const role = document.getElementById("role").value;
 
         // Client-side validation
@@ -153,9 +536,18 @@
           return;
         }
 
-        const passwordError = validatePassword(password);
-        if (passwordError) {
-          showMessage(passwordError, "error");
+        const passwordValidation = validatePassword(password);
+        if (!passwordValidation.isValid) {
+          showMessage(passwordValidation.errors[0], "error");
+          return;
+        }
+
+        const confirmError = validatePasswordConfirmation(
+          password,
+          confirmPassword
+        );
+        if (confirmError) {
+          showMessage(confirmError, "error");
           return;
         }
 
@@ -183,6 +575,8 @@
 
           // Clear form
           registerForm.reset();
+          document.getElementById("passwordRequirements").style.display =
+            "none";
 
           // Redirect to login after short delay
           setTimeout(() => {
@@ -197,20 +591,6 @@
           registerBtn.textContent = "Create Account";
         }
       });
-
-      // Real-time password validation
-      document
-        .getElementById("password")
-        .addEventListener("input", function (e) {
-          const password = e.target.value;
-          const passwordError = validatePassword(password);
-
-          if (password.length > 0 && passwordError) {
-            e.target.setCustomValidity(passwordError);
-          } else {
-            e.target.setCustomValidity("");
-          }
-        });
     </script>
   </body>
 </html>

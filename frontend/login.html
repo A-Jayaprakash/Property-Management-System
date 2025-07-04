@@ -115,21 +115,16 @@
 
           showMessage(data.message || "Login successful!", "success");
 
-          // Store user data in memory instead of localStorage
-          window.userData = {
-            token: data.token,
-            user: data.user,
-          };
+          sessionStorage.setItem("authToken", data.token);
+          sessionStorage.setItem("userData", JSON.stringify(data.user));
 
-          // Redirect after short delay
           setTimeout(() => {
-            window.location.href = "/index.html";
+            window.location.href = "index.html";
           }, 1500);
         } catch (err) {
           console.error(err);
           showMessage("Server error. Please try again.", "error");
         } finally {
-          // Re-enable button
           loginBtn.disabled = false;
           loginBtn.textContent = "Sign In";
         }
