@@ -1,13 +1,34 @@
-async function deleteProperty(propertyId) {
+async function deleteProperty(propertyId, propertyName) {
   if (!propertyId) {
     showError("Invalid property ID");
+    return;
+  }
+
+  // Check if user has permission to delete properties
+  const userRole = window.userData?.user?.role || "tenant";
+  const currentUserId = window.userData?.user?.id;
+
+  if (userRole === "tenant") {
+    showError("Access denied: Only admin and manager can delete properties");
+    return;
+  }
+
+  // Find the property to check ownership
+  const property = properties.find((p) => p._id === propertyId);
+  if (!property) {
+    showError("Property not found");
+    return;
+  }
+
+  if (userRole === "manager" && property.createdBy !== currentUserId) {
+    showError("Access denied: You can only delete properties you created");
     return;
   }
 
   // Confirm deletion
   if (
     !confirm(
-      "Are you sure you want to delete this property? This action cannot be undone."
+      `Are you sure you want to delete "${propertyName}"? This action cannot be undone.`
     )
   ) {
     return;
@@ -37,6 +58,12 @@ async function deleteProperty(propertyId) {
         setTimeout(() => {
           logout();
         }, 2000);
+        return;
+      }
+
+      if (response.status === 403) {
+        const errorData = await response.json();
+        showError(errorData.message || "Access denied");
         return;
       }
 

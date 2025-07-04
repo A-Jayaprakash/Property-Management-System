@@ -1,208 +1,242 @@
 <!DOCTYPE html>
-
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Property Management System</title>
+    <title>Property Management Dashboard</title>
     <link rel="stylesheet" href="styles/index.css" />
   </head>
-
   <body>
     <div class="container">
-      <!-- This section is for the header of property CRUD module -->
       <div class="header">
-        <h1>Property Management System</h1>
-        <p>Manage your properties efficiently and effectively</p>
+        <h1>Property Management Dashboard</h1>
+        <div class="user-info">
+          <span id="userGreeting">Welcome, User!</span>
+          <span id="userRole" class="user-role-badge role-tenant">Tenant</span>
+          <div class="header-actions">
+            <button id="themeToggle" class="btn btn-secondary">
+              <span id="themeIcon">🌙</span>
+              <span id="themeText">Dark Mode</span>
+            </button>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+          </div>
+        </div>
       </div>
 
-      <!-- This section is for the actions which can be performed by the user in the property CRUD module -->
-      <div class="actions-bar">
-        <!-- This is the search box -->
-        <div class="search-box">
+      <!-- Role-based permissions info -->
+      <div id="rolePermissions" class="role-permissions" style="display: none">
+        <h4>Your Permissions</h4>
+        <ul id="permissionsList" class="permission-list">
+          <!-- Will be populated by JavaScript -->
+        </ul>
+      </div>
+
+      <!-- Search and Add Property Section -->
+      <div class="search-section">
+        <div class="search-container">
           <input
             type="text"
             id="searchInput"
-            placeholder="Search properties..."
+            placeholder="Search properties by name, address, locality, or type..."
           />
-        </div>
-
-        <!-- This is the flex box which holds the Theme and Add button -->
-        <div style="display: flex; gap: 15px; align-items: center">
-          <!-- Theme Button -->
           <button
-            class="btn theme-toggle-btn"
-            id="themeToggle"
-            onclick="toggleTheme()"
-            title="Toggle Theme"
+            id="addPropertyBtn"
+            class="btn btn-primary"
+            onclick="openAddModal()"
+            style="display: none"
           >
-            <span id="themeIcon">🌙</span>
-            <span id="themeText">Dark Mode</span>
-          </button>
-
-          <!-- Add Property Button -->
-          <button class="btn btn-primary" onclick="openAddModal()">
-            ➕ Add New Property
+            Add New Property
           </button>
         </div>
       </div>
 
-      <div id="errorMessage" class="error-message"></div>
-      <div id="successMessage" class="success-message"></div>
+      <!-- Messages -->
+      <div id="loadingIndicator" class="loading" style="display: none">
+        Loading properties...
+      </div>
+      <div id="errorMessage" class="error" style="display: none"></div>
+      <div id="successMessage" class="success" style="display: none"></div>
 
-      <div id="loadingIndicator" class="loading">Loading properties...</div>
-
-      <div id="propertiesContainer" class="properties-grid"></div>
+      <!-- Properties Container -->
+      <div id="propertiesContainer" class="properties-container">
+        <!-- Properties will be rendered here -->
+      </div>
     </div>
 
-    <!-- Add/Edit Property Modal -->
+    <!-- Property Modal -->
     <div id="propertyModal" class="modal">
       <div class="modal-content">
-        <!-- Modal Header -->
         <div class="modal-header">
           <h2 id="modalTitle">Add New Property</h2>
           <span class="close" onclick="closeModal()">&times;</span>
         </div>
-
-        <div class="modal-body">
-          <form id="propertyForm">
-            <div class="form-group">
-              <label for="propertyName">Property Name *</label>
-              <input type="text" id="propertyName" name="name" required />
-            </div>
-
-            <div class="form-group">
-              <label for="propertyAddress">Address *</label>
-              <input type="text" id="propertyAddress" name="address" required />
-            </div>
-
-            <div class="form-group">
-              <label for="propertyLocality">Locality</label>
-              <input type="text" id="propertyLocality" name="locality" />
-            </div>
-
-            <div class="form-group">
-              <label for="propertyType">Property Type *</label>
-              <select id="propertyType" name="type" required>
-                <option value="">Select Type</option>
-                <option value="Residential">Residential</option>
-                <option value="Commercial">Commercial</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="unitCount">Unit Count *</label>
-              <input
-                type="number"
-                id="unitCount"
-                name="unitCount"
-                min="1"
-                required
-              />
-            </div>
-
-            <div
-              style="
-                display: flex;
-                gap: 15px;
-                justify-content: flex-end;
-                margin-top: 30px;
-              "
+        <form id="propertyForm">
+          <div class="form-group">
+            <label for="propertyName">Property Name *</label>
+            <input type="text" id="propertyName" name="name" required />
+          </div>
+          <div class="form-group">
+            <label for="propertyAddress">Address *</label>
+            <textarea id="propertyAddress" name="address" required></textarea>
+          </div>
+          <div class="form-group">
+            <label for="propertyLocality">Locality</label>
+            <input type="text" id="propertyLocality" name="locality" />
+          </div>
+          <div class="form-group">
+            <label for="propertyType">Type *</label>
+            <select id="propertyType" name="type" required>
+              <option value="">Select Type</option>
+              <option value="Residential">Residential</option>
+              <option value="Commercial">Commercial</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="unitCount">Unit Count *</label>
+            <input
+              type="number"
+              id="unitCount"
+              name="unitCount"
+              min="1"
+              required
+            />
+          </div>
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="closeModal()"
             >
-              <button
-                type="button"
-                class="btn btn-secondary"
-                onclick="closeModal()"
-              >
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-success" id="submitBtn">
-                Save Property
-              </button>
-            </div>
-          </form>
-        </div>
+              Cancel
+            </button>
+            <button type="submit" id="submitBtn" class="btn btn-primary">
+              Save Property
+            </button>
+          </div>
+        </form>
       </div>
     </div>
 
+    <!-- Include all your existing JavaScript files -->
     <script>
       // Global variables
       let properties = [];
       let currentEditId = null;
-      let isAuthenticated = false;
       let authToken = null;
+      let isAuthenticated = false;
+      const API_BASE_URL = "http://localhost:3000/api/properties";
 
-      // Better API URL detection
-      const getAPIBaseURL = () => {
-        if (
-          window.location.hostname === "localhost" ||
-          window.location.hostname === "127.0.0.1"
-        ) {
-          return "http://localhost:3000/api/properties";
-        } else {
-          // For production, use the same origin
-          return `${window.location.protocol}//${window.location.host}/api/properties`;
+      // Initialize the dashboard
+      document.addEventListener("DOMContentLoaded", function () {
+        if (checkAuthentication()) {
+          updateUIForRole();
+          loadProperties();
+          setupSearchListener();
+          setupFormListener();
+          initializeTheme();
         }
-      };
+      });
 
-      const API_BASE_URL = getAPIBaseURL();
+      function updateUIForRole() {
+        const userData = window.userData;
+        if (!userData || !userData.user) return;
 
-      console.log("API Base URL:", API_BASE_URL);
+        const userRole = userData.user.role;
+        const userName = userData.user.name;
+
+        // Update user greeting
+        document.getElementById(
+          "userGreeting"
+        ).textContent = `Welcome, ${userName}!`;
+
+        // Update role badge
+        const roleBadge = document.getElementById("userRole");
+        roleBadge.textContent = userRole;
+        roleBadge.className = `user-role-badge role-${userRole}`;
+
+        // Show/hide Add Property button based on role
+        const addPropertyBtn = document.getElementById("addPropertyBtn");
+        if (userRole === "tenant") {
+          addPropertyBtn.style.display = "none";
+        } else {
+          addPropertyBtn.style.display = "inline-block";
+        }
+
+        // Show role permissions
+        showRolePermissions(userRole);
+      }
+
+      function showRolePermissions(role) {
+        const permissionsDiv = document.getElementById("rolePermissions");
+        const permissionsList = document.getElementById("permissionsList");
+
+        let permissions = [];
+
+        switch (role) {
+          case "admin":
+            permissions = [
+              "View all properties",
+              "Create new properties",
+              "Edit any property",
+              "Delete any property",
+            ];
+            break;
+          case "manager":
+            permissions = [
+              "View all properties",
+              "Create new properties",
+              "Edit properties you created",
+              "Delete properties you created",
+            ];
+            break;
+          case "tenant":
+            permissions = [
+              "View all properties",
+              { text: "Create new properties", disabled: true },
+              { text: "Edit properties", disabled: true },
+              { text: "Delete properties", disabled: true },
+            ];
+            break;
+        }
+
+        permissionsList.innerHTML = permissions
+          .map((permission) => {
+            if (typeof permission === "string") {
+              return `<li>${permission}</li>`;
+            } else {
+              return `<li class="disabled">${permission.text}</li>`;
+            }
+          })
+          .join("");
+
+        permissionsDiv.style.display = "block";
+      }
 
       function logout() {
         sessionStorage.removeItem("authToken");
         sessionStorage.removeItem("userData");
-        authToken = null;
-        isAuthenticated = false;
         window.location.href = "login.html";
       }
-
-      // Initialize the application
-      document.addEventListener("DOMContentLoaded", async function () {
-        console.log("DOM loaded, initializing application");
-
-        // First, check authentication
-        if (!checkAuthentication()) {
-          return; // Will redirect to login
-        }
-
-        console.log("Authentication check passed, loading properties");
-
-        // Load properties after authentication is confirmed
-        await loadProperties();
-
-        // Setup other listeners
-        setupSearchListener();
-        setupFormListener();
-        initializeTheme();
-      });
-
-      // Modal click handler
-      window.onclick = function (event) {
-        const modal = document.getElementById("propertyModal");
-        if (event.target === modal) {
-          closeModal();
-        }
-      };
     </script>
-    <script src="property/escapeHTML.js"></script>
-    <script src="property/showLoading.js"></script>
-    <script src="property/showError.js"></script>
-    <script src="property/showSuccess.js"></script>
+
+    <!-- Include all your existing JavaScript files -->
+    <script src="auth/checkAuthentication.js"></script>
+    <script src="auth/getAuthHeaders.js"></script>
+    <script src="auth/makeAuthenticatedRequest.js"></script>
+    <script src="property/loadProperties.js"></script>
+    <script src="property/renderProperties.js"></script>
     <script src="property/openModal.js"></script>
     <script src="property/closeModal.js"></script>
-    <script src="property/formListener.js"></script>
+    <script src="property/editProperty.js"></script>
+    <script src="property/deleteProperty.js"></script>
     <script src="property/formSubmit.js"></script>
     <script src="property/searchListener.js"></script>
+    <script src="property/formListener.js"></script>
+    <script src="property/showError.js"></script>
+    <script src="property/showSuccess.js"></script>
+    <script src="property/showLoading.js"></script>
+    <script src="property/escapeHTML.js"></script>
     <script src="property/filterProperties.js"></script>
-    <script src="property/loadProperties.js"></script>
-    <script src="property/deleteProperty.js"></script>
-    <script src="property/renderProperties.js"></script>
-    <script src="property/editProperty.js"></script>
     <script src="property/toggleTheme.js"></script>
-    <script src="auth/checkAuthentication.js"></script>
-    <script src="auth/makeAuthenticatedRequest.js"></script>
-    <script src="auth/getAuthHeaders.js"></script>
-    <script src="auth/verifyTokenValidity.js"></script>
   </body>
 </html>
