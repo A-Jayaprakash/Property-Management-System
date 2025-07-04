@@ -9,10 +9,18 @@
   <body>
     <div class="container">
       <div class="header">
-        <h1>Property Management Dashboard</h1>
-        <div class="user-info">
-          <span id="userGreeting">Welcome, User!</span>
-          <span id="userRole" class="user-role-badge role-tenant">Tenant</span>
+        <div class="header-left">
+          <h1>Property Management Dashboard</h1>
+        </div>
+        <div class="header-right">
+          <div class="user-info">
+            <span id="userGreeting" class="user-greeting"
+              >Welcome, Jayaprakash!</span
+            >
+            <span id="userRole" class="user-role-badge role-manager"
+              >MANAGER</span
+            >
+          </div>
           <div class="header-actions">
             <button id="themeToggle" class="btn btn-secondary">
               <span id="themeIcon">🌙</span>
@@ -23,29 +31,22 @@
         </div>
       </div>
 
-      <!-- Role-based permissions info -->
-      <div id="rolePermissions" class="role-permissions" style="display: none">
-        <h4>Your Permissions</h4>
-        <ul id="permissionsList" class="permission-list">
-          <!-- Will be populated by JavaScript -->
-        </ul>
-      </div>
-
       <!-- Search and Add Property Section -->
       <div class="search-section">
         <div class="search-container">
-          <input
-            type="text"
-            id="searchInput"
-            placeholder="Search properties by name, address, locality, or type..."
-          />
+          <div class="search-box">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search properties by name, address, locality, or type..."
+            />
+          </div>
           <button
             id="addPropertyBtn"
             class="btn btn-primary"
             onclick="openAddModal()"
-            style="display: none"
           >
-            Add New Property
+            ➕ Add New Property
           </button>
         </div>
       </div>
@@ -59,7 +60,17 @@
 
       <!-- Properties Container -->
       <div id="propertiesContainer" class="properties-container">
-        <!-- Properties will be rendered here -->
+        <div class="property-actions">
+          <button class="btn btn-warning" onclick="editProperty('1')">
+            ✏️ Edit
+          </button>
+          <button
+            class="btn btn-danger"
+            onclick="deleteProperty('1', 'Hunter Mansion')"
+          >
+            🗑️ Delete
+          </button>
+        </div>
       </div>
     </div>
 
@@ -70,173 +81,169 @@
           <h2 id="modalTitle">Add New Property</h2>
           <span class="close" onclick="closeModal()">&times;</span>
         </div>
-        <form id="propertyForm">
-          <div class="form-group">
-            <label for="propertyName">Property Name *</label>
-            <input type="text" id="propertyName" name="name" required />
-          </div>
-          <div class="form-group">
-            <label for="propertyAddress">Address *</label>
-            <textarea id="propertyAddress" name="address" required></textarea>
-          </div>
-          <div class="form-group">
-            <label for="propertyLocality">Locality</label>
-            <input type="text" id="propertyLocality" name="locality" />
-          </div>
-          <div class="form-group">
-            <label for="propertyType">Type *</label>
-            <select id="propertyType" name="type" required>
-              <option value="">Select Type</option>
-              <option value="Residential">Residential</option>
-              <option value="Commercial">Commercial</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="unitCount">Unit Count *</label>
-            <input
-              type="number"
-              id="unitCount"
-              name="unitCount"
-              min="1"
-              required
-            />
-          </div>
-          <div class="form-actions">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              onclick="closeModal()"
-            >
-              Cancel
-            </button>
-            <button type="submit" id="submitBtn" class="btn btn-primary">
-              Save Property
-            </button>
-          </div>
-        </form>
+        <div class="modal-body">
+          <form id="propertyForm">
+            <div class="form-group">
+              <label for="propertyName">Property Name *</label>
+              <input type="text" id="propertyName" name="name" required />
+            </div>
+            <div class="form-group">
+              <label for="propertyAddress">Address *</label>
+              <textarea id="propertyAddress" name="address" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="propertyLocality">Locality</label>
+              <input type="text" id="propertyLocality" name="locality" />
+            </div>
+            <div class="form-group">
+              <label for="propertyType">Type *</label>
+              <select id="propertyType" name="type" required>
+                <option value="">Select Type</option>
+                <option value="Residential">Residential</option>
+                <option value="Commercial">Commercial</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="unitCount">Unit Count *</label>
+              <input
+                type="number"
+                id="unitCount"
+                name="unitCount"
+                min="1"
+                required
+              />
+            </div>
+            <div class="form-actions">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                onclick="closeModal()"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                id="submitBtn"
+                class="btn btn-primary"
+                onclick="setupFormListener()"
+              >
+                Save Property
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
 
-    <!-- Include all your existing JavaScript files -->
     <script>
-      // Global variables
-      let properties = [];
-      let currentEditId = null;
-      let authToken = null;
-      let isAuthenticated = false;
-      const API_BASE_URL = "http://localhost:3000/api/properties";
+      // Theme toggle functionality
+      const API_BASE_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://localhost:3000/api/properties"
+          : `${window.location.origin}/api/properties`;
 
-      // Initialize the dashboard
-      document.addEventListener("DOMContentLoaded", function () {
-        if (checkAuthentication()) {
-          updateUIForRole();
-          loadProperties();
-          setupSearchListener();
-          setupFormListener();
-          initializeTheme();
-        }
-      });
+      const AUTH_API_URL =
+        window.location.hostname === "localhost" ||
+        window.location.hostname === "127.0.0.1"
+          ? "http://localhost:3000/api/auth"
+          : `${window.location.origin}/api/auth`;
+      function initializeTheme() {
+        const themeToggle = document.getElementById("themeToggle");
+        const themeIcon = document.getElementById("themeIcon");
+        const themeText = document.getElementById("themeText");
 
-      function updateUIForRole() {
-        const userData = window.userData;
-        if (!userData || !userData.user) return;
+        // Load saved theme or default to light
+        const savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme);
 
-        const userRole = userData.user.role;
-        const userName = userData.user.name;
+        // Update button based on current theme
+        updateThemeButton(savedTheme);
 
-        // Update user greeting
-        document.getElementById(
-          "userGreeting"
-        ).textContent = `Welcome, ${userName}!`;
+        // Add click event listener
+        themeToggle.addEventListener("click", function () {
+          const currentTheme =
+            document.documentElement.getAttribute("data-theme");
+          const newTheme = currentTheme === "dark" ? "light" : "dark";
 
-        // Update role badge
-        const roleBadge = document.getElementById("userRole");
-        roleBadge.textContent = userRole;
-        roleBadge.className = `user-role-badge role-${userRole}`;
+          document.documentElement.setAttribute("data-theme", newTheme);
+          localStorage.setItem("theme", newTheme);
+          updateThemeButton(newTheme);
 
-        // Show/hide Add Property button based on role
-        const addPropertyBtn = document.getElementById("addPropertyBtn");
-        if (userRole === "tenant") {
-          addPropertyBtn.style.display = "none";
+          // Add animation effect
+          document.body.style.transition = "all 0.3s ease";
+          setTimeout(() => {
+            document.body.style.transition = "";
+          }, 300);
+        });
+      }
+
+      function updateThemeButton(theme) {
+        const themeIcon = document.getElementById("themeIcon");
+        const themeText = document.getElementById("themeText");
+
+        if (theme === "dark") {
+          themeIcon.textContent = "☀️";
+          themeText.textContent = "Light Mode";
         } else {
-          addPropertyBtn.style.display = "inline-block";
+          themeIcon.textContent = "🌙";
+          themeText.textContent = "Dark Mode";
         }
-
-        // Show role permissions
-        showRolePermissions(userRole);
       }
 
-      function showRolePermissions(role) {
-        const permissionsDiv = document.getElementById("rolePermissions");
-        const permissionsList = document.getElementById("permissionsList");
-
-        let permissions = [];
-
-        switch (role) {
-          case "admin":
-            permissions = [
-              "View all properties",
-              "Create new properties",
-              "Edit any property",
-              "Delete any property",
-            ];
-            break;
-          case "manager":
-            permissions = [
-              "View all properties",
-              "Create new properties",
-              "Edit properties you created",
-              "Delete properties you created",
-            ];
-            break;
-          case "tenant":
-            permissions = [
-              "View all properties",
-              { text: "Create new properties", disabled: true },
-              { text: "Edit properties", disabled: true },
-              { text: "Delete properties", disabled: true },
-            ];
-            break;
-        }
-
-        permissionsList.innerHTML = permissions
-          .map((permission) => {
-            if (typeof permission === "string") {
-              return `<li>${permission}</li>`;
-            } else {
-              return `<li class="disabled">${permission.text}</li>`;
-            }
-          })
-          .join("");
-
-        permissionsDiv.style.display = "block";
+      function openAddModal() {
+        const modal = document.getElementById("propertyModal");
+        const modalTitle = document.getElementById("modalTitle");
+        modalTitle.textContent = "Add New Property";
+        modal.style.display = "block";
+        document.getElementById("propertyForm").reset();
       }
+
+      function closeModal() {
+        const modal = document.getElementById("propertyModal");
+        modal.style.display = "none";
+        document.getElementById("propertyForm").reset();
+      }
+      // Modal functions
 
       function logout() {
         sessionStorage.removeItem("authToken");
         sessionStorage.removeItem("userData");
         window.location.href = "login.html";
       }
-    </script>
 
-    <!-- Include all your existing JavaScript files -->
+      document.addEventListener("DOMContentLoaded", async function () {
+        initializeTheme();
+        if (!checkAuthentication()) return;
+
+        await loadProperties();
+        setupSearchListener();
+        setupFormListener();
+      });
+
+      // Close modal when clicking outside
+      window.addEventListener("click", function (event) {
+        const modal = document.getElementById("propertyModal");
+        if (event.target === modal) {
+          closeModal();
+        }
+      });
+    </script>
+    <script src="property/escapeHTML.js"></script>
     <script src="auth/checkAuthentication.js"></script>
     <script src="auth/getAuthHeaders.js"></script>
     <script src="auth/makeAuthenticatedRequest.js"></script>
-    <script src="property/loadProperties.js"></script>
-    <script src="property/renderProperties.js"></script>
-    <script src="property/openModal.js"></script>
-    <script src="property/closeModal.js"></script>
-    <script src="property/editProperty.js"></script>
-    <script src="property/deleteProperty.js"></script>
-    <script src="property/formSubmit.js"></script>
-    <script src="property/searchListener.js"></script>
-    <script src="property/formListener.js"></script>
+    <script src="auth/verifyTokenValidity.js"></script>
     <script src="property/showError.js"></script>
     <script src="property/showSuccess.js"></script>
     <script src="property/showLoading.js"></script>
-    <script src="property/escapeHTML.js"></script>
+    <script src="property/formListener.js"></script>
+    <script src="property/formSubmit.js"></script>
+    <script src="property/deleteProperty.js"></script>
+    <script src="property/editProperty.js"></script>
+    <script src="property/renderProperties.js"></script>
+    <script src="property/loadProperties.js"></script>
+    <script src="property/searchListener.js"></script>
     <script src="property/filterProperties.js"></script>
-    <script src="property/toggleTheme.js"></script>
   </body>
 </html>
