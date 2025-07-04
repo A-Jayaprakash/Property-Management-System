@@ -228,9 +228,44 @@
         window.location.href = "login.html";
       }
 
+      function updateUserInfo() {
+        const userGreeting = document.getElementById("userGreeting");
+        const userRole = document.getElementById("userRole");
+
+        if (window.userData && window.userData.user) {
+          const user = window.userData.user;
+
+          // Update greeting
+          if (userGreeting) {
+            userGreeting.textContent = `Welcome, ${
+              user.name || user.username || "User"
+            }!`;
+          }
+
+          // Update role badge
+          if (userRole) {
+            const role = user.role || "tenant";
+            userRole.textContent = role.toUpperCase();
+
+            // Remove existing role classes
+            userRole.classList.remove(
+              "role-admin",
+              "role-manager",
+              "role-tenant"
+            );
+
+            // Add appropriate role class
+            userRole.classList.add(`role-${role.toLowerCase()}`);
+          }
+        }
+      }
+
       document.addEventListener("DOMContentLoaded", async function () {
         initializeTheme();
         if (!checkAuthentication()) return;
+
+        // Update user info in header
+        updateUserInfo();
 
         await loadProperties();
         setupSearchListener();
