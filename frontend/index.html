@@ -121,12 +121,7 @@
               >
                 Cancel
               </button>
-              <button
-                type="submit"
-                id="submitBtn"
-                class="btn btn-primary"
-                onclick="setupFormListener()"
-              >
+              <button type="submit" id="submitBtn" class="btn btn-primary">
                 Save Property
               </button>
             </div>
@@ -136,6 +131,12 @@
     </div>
 
     <script>
+      // Global variables declaration
+      let properties = [];
+      let currentEditId = null;
+      let isAuthenticated = false;
+      let authToken = null;
+
       // Theme toggle functionality
       const API_BASE_URL =
         window.location.hostname === "localhost" ||
@@ -148,6 +149,7 @@
         window.location.hostname === "127.0.0.1"
           ? "http://localhost:3000/api/auth"
           : `${window.location.origin}/api/auth`;
+
       function initializeTheme() {
         const themeToggle = document.getElementById("themeToggle");
         const themeIcon = document.getElementById("themeIcon");
@@ -192,9 +194,23 @@
       }
 
       function openAddModal() {
+        // Check if user has permission to add properties
+        const userRole = window.userData?.user?.role || "tenant";
+
+        if (userRole === "tenant") {
+          showError(
+            "Access denied: Only admin and manager can create properties"
+          );
+          return;
+        }
+
+        currentEditId = null;
         const modal = document.getElementById("propertyModal");
         const modalTitle = document.getElementById("modalTitle");
+        const submitBtn = document.getElementById("submitBtn");
+
         modalTitle.textContent = "Add New Property";
+        submitBtn.textContent = "Save Property";
         modal.style.display = "block";
         document.getElementById("propertyForm").reset();
       }
@@ -203,8 +219,8 @@
         const modal = document.getElementById("propertyModal");
         modal.style.display = "none";
         document.getElementById("propertyForm").reset();
+        currentEditId = null;
       }
-      // Modal functions
 
       function logout() {
         sessionStorage.removeItem("authToken");
