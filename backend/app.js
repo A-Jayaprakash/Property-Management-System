@@ -10,16 +10,15 @@ dotenv.config();
 
 // Import custom modules
 const propertyRoutes = require("./routes/propertyRoutes");
+const tenantRoutes = require("./routes/tenantRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
 // Initialize Express app
 const app = express();
 
-// ✅ Enable JSON parsing
 app.use(express.json());
 
-// ✅ Enable CORS before any routes
 app.use(
   cors({
     origin: [
@@ -35,16 +34,13 @@ app.use(
   })
 );
 
-// ✅ Preflight support for all routes (important)
 app.options("*", cors());
 
-// ✅ Log all incoming requests
 app.use((req, res, next) => {
   console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
   next();
 });
 
-// ✅ MongoDB connection
 const connectDB = async () => {
   try {
     if (!process.env.MONGO_URI) {
@@ -57,15 +53,14 @@ const connectDB = async () => {
       useUnifiedTopology: true,
     });
 
-    console.log("✅ Connected to MongoDB");
+    console.log("Connected to MongoDB");
   } catch (error) {
-    console.error("❌ MongoDB connection failed:", error.message);
+    console.error("MongoDB connection failed:", error.message);
     process.exit(1);
   }
 };
 connectDB();
 
-// ✅ Health check route
 app.get("/", (req, res) => {
   res.json({
     message: "Property Management System API is running...",
@@ -73,24 +68,20 @@ app.get("/", (req, res) => {
   });
 });
 
-// ✅ API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", verifyToken, propertyRoutes);
+app.use("/api/tenants", verifyToken, tenantRoutes);
 
-// ✅ Static frontend served only after API routes
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-// ✅ Handle non-API frontend routes (e.g., /login.html, /dashboard.html)
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// ✅ 404 handler for unmatched API routes
 app.use("/api/*", (req, res) => {
   res.status(404).json({ message: "API endpoint not found" });
 });
 
-// ✅ General error handler
 app.use((err, req, res, next) => {
   console.error("Unhandled Error:", err.stack);
   res.status(500).json({
@@ -102,7 +93,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ✅ Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);

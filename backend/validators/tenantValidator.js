@@ -1,114 +1,78 @@
-const Tenant = require("../models/Tenant");
-const Unit = require("../models/Unit");
+const { body, validationResult } = require("express-validator");
 
-const createTenant = async (req, res) => {
-  try {
-    const managerId = req.user.id;
-    const { name, username, email, phone, assigned_unit } = req.body;
+// Validation rules for tenant creation and updates
+const validateTenant = [
+  body("name")
+    .notEmpty()
+    .withMessage("Name is required")
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Name must be between 2 and 50 characters")
+    .trim(),
 
-    const unit = await Unit.findById(assigned_unit);
-    if (!unit || unit.manager.toString() !== managerId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to assign tenant to this unit" });
-    }
+  body("email")
+    .isEmail()
+    .withMessage("Please provide a valid email address")
+    .normalizeEmail(),
 
-    const existingTenant = await Tenant.findOne({
-      $or: [{ email }, { phone }],
-    });
-    if (existingTenant) {
-      return res
-        .status(400)
-        .json({ message: "Tenant with this email or phone already exists" });
-    }
+  body("phone")
+    .matches(/^\d{10}$/)
+    .withMessage("Phone number must be exactly 10 digits"),
 
-    const newTenant = new Tenant({
-      name,
-      username,
-      email,
-      phone,
-      assigned_unit,
-    });
-    await newTenant.save();
+  body("assigned_unit")
+    .notEmpty()
+    .withMessage("Assigned unit is required")
+    .isMongoId()
+    .withMessage("Invalid unit ID"),
 
-    return res
-      .status(201)
-      .json({ message: "Tenant Successfully Created", tenant: newTenant });
-  } catch (error) {
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+  body("address")
+    .optional()
+    .isLength({ max: 200 })
+    .withMessage("Address cannot exceed 200 characters")
+    .trim(),
 
-const getAllTenant = async (req, res) => {
-  try {
-    const managerId = req.user.id;
-    const units = await Unit.find({ manager: managerId }).select("_id");
-    const unitIds = units.map((unit) => unit._id);
-    const tenants = await Tenant.find({ assigned_unit: { $in: unitIds } });
-    return res.status(200).json(tenants);
-  } catch (error) {
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
-};
+  body("lease_start")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid lease start date format"),
 
-const updateTenant = async (req, res) => {
-  try {
-    const managerId = req.user.id;
-    const { id } = req.params;
-    const updates = req.body;
-
-    const tenant = await Tenant.findById(id);
-    if (!tenant) return res.status(404).json({ message: "Tenant not found" });
-
-    const currentUnit = await Unit.findById(tenant.assigned_unit);
-    if (!currentUnit || currentUnit.manager.toString() !== managerId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to update this tenant" });
-    }
-
-    // If unit is being changed, check manager permission on new unit
-    if (
-      updates.assigned_unit &&
-      updates.assigned_unit !== tenant.assigned_unit.toString()
-    ) {
-      const newUnit = await Unit.findById(updates.assigned_unit);
-      if (!newUnit || newUnit.manager.toString() !== managerId) {
-        return res
-          .status(403)
-          .json({ message: "Unauthorized to assign tenant to this new unit" });
+  body("lease_end")
+    .optional()
+    .isISO8601()
+    .withMessage("Invalid lease end date format")
+    .custom((value, { req }) => {
+      if (value && req.body.lease_start) {
+        const startDate = new Date(req.body.lease_start);
+        const endDate = new Date(value);
+        if (endDate <= startDate) {
+          throw new Error("Lease end date must be after lease start date");
+        }
       }
-    }
+      return true;
+    }),
 
-    Object.assign(tenant, updates);
-    await tenant.save();
+  body("status")
+    .optional()
+    .isIn(["active", "inactive", "terminated"])
+    .withMessage("Status must be active, inactive, or terminated"),
+];
 
-    return res.status(200).json({ message: "Tenant updated", tenant });
-  } catch (error) {
-    return res.status(500).json({ message: "Internal Server Error" });
+// Validation error handler middleware
+const handleValidationErrors = (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      message: "Validation failed",
+      errors: errors.array().map((error) => ({
+        field: error.param,
+        message: error.msg,
+        value: error.value,
+      })),
+    });
   }
+  next();
 };
 
-const deleteTenant = async (req, res) => {
-  try {
-    const managerId = req.user.id;
-    const { id } = req.params;
-
-    const tenant = await Tenant.findById(id);
-    if (!tenant) return res.status(404).json({ message: "Tenant not found" });
-
-    const unit = await Unit.findById(tenant.assigned_unit);
-    if (!unit || unit.manager.toString() !== managerId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to delete this tenant" });
-    }
-
-    await tenant.deleteOne();
-    return res.status(200).json({ message: "Tenant deleted" });
-  } catch (error) {
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
+module.exports = {
+  validateTenant,
+  handleValidationErrors,
 };
-
-module.exports = { createTenant, getAllTenant, updateTenant, deleteTenant };
