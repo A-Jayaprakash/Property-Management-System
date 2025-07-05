@@ -39,6 +39,26 @@
         </div>
 
         <div class="form-group">
+          <label for="email">Email</label>
+          <input
+            type="email"
+            id="email"
+            placeholder="Enter your email"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone Number</label>
+          <input
+            type="tel"
+            id="phone"
+            placeholder="Enter your 10-digit phone"
+            required
+          />
+        </div>
+
+        <div class="form-group">
           <label for="password">Password</label>
           <input
             type="password"
@@ -191,6 +211,8 @@
 
         const name = document.getElementById("name").value.trim();
         const username = document.getElementById("username").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const phone = document.getElementById("phone").value.trim();
         const password = document.getElementById("password").value;
         const confirmPassword =
           document.getElementById("confirmPassword").value;
@@ -231,7 +253,14 @@
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({ name, username, password, role }),
+            body: JSON.stringify({
+              name,
+              username,
+              email,
+              phone,
+              password,
+              role,
+            }),
           });
 
           const data = await res.json();

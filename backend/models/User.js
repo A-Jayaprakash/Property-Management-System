@@ -12,6 +12,16 @@ const userSchema = new mongoose.Schema(
       minlength: 6,
       required: true,
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    phone: {
+      type: String,
+      require: true,
+      match: /^\d{10}$/,
+    },
     password: {
       type: String,
       required: true,

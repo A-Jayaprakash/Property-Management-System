@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const Tenant = require("../models/Tenant");
 const {
   generateToken,
   hashPassword,
@@ -43,7 +44,7 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const { name, username, password, role } = req.body;
+    const { name, username, email, phone, password, role } = req.body;
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: "User Already Exists" });
@@ -53,10 +54,21 @@ router.post("/register", async (req, res) => {
     const newUser = new User({
       name,
       username,
+      email,
+      phone,
       password: hashedPassword,
       role: role || "tenant",
     });
     await newUser.save();
+    if (role === "tenant") {
+      const newTenant = new Tenant({
+        name,
+        username,
+        email,
+        phone,
+      });
+      await newTenant.save();
+    }
     return res.status(201).json({ message: "User Successfully Registered" });
   } catch (error) {
     console.log("Registration Failed:", error);
