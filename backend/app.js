@@ -11,6 +11,7 @@ dotenv.config();
 // Import custom modules
 const propertyRoutes = require("./routes/propertyRoutes");
 const tenantRoutes = require("./routes/tenantRoutes");
+const unitRoutes = require("./routes/unitRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -29,7 +30,7 @@ app.use(
       "http://localhost:8080",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
@@ -65,23 +66,35 @@ app.get("/", (req, res) => {
   res.json({
     message: "Property Management System API is running...",
     status: "OK",
+    endpoints: {
+      auth: "/api/auth",
+      properties: "/api/properties",
+      tenants: "/api/tenants",
+      units: "/api/units",
+    },
   });
 });
 
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", verifyToken, propertyRoutes);
 app.use("/api/tenants", verifyToken, tenantRoutes);
+app.use("/api/units", verifyToken, unitRoutes);
 
+// Serve static files from frontend
 app.use(express.static(path.join(__dirname, "../frontend")));
 
+// Serve frontend for any non-API routes
 app.get(/^\/(?!api).*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
+// Handle 404 for API routes
 app.use("/api/*", (req, res) => {
   res.status(404).json({ message: "API endpoint not found" });
 });
 
+// Global error handler
 app.use((err, req, res, next) => {
   console.error("Unhandled Error:", err.stack);
   res.status(500).json({
@@ -97,4 +110,9 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`🌱 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`📚 API Documentation:`);
+  console.log(`   - Authentication: http://localhost:${PORT}/api/auth`);
+  console.log(`   - Properties: http://localhost:${PORT}/api/properties`);
+  console.log(`   - Tenants: http://localhost:${PORT}/api/tenants`);
+  console.log(`   - Units: http://localhost:${PORT}/api/units`);
 });
