@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Unit Management System</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/unit.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1><i class="fas fa-building"></i> Unit Management System</h1>
+        <p>
+          Manage your property units efficiently with our comprehensive
+          dashboard
+        </p>
+      </div>
+
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <i class="fas fa-home"></i>
+          <h3 id="totalUnits">0</h3>
+          <p>Total Units</p>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-check-circle"></i>
+          <h3 id="availableUnits">0</h3>
+          <p>Available</p>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-users"></i>
+          <h3 id="occupiedUnits">0</h3>
+          <p>Occupied</p>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-tools"></i>
+          <h3 id="maintenanceUnits">0</h3>
+          <p>Maintenance</p>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-percentage"></i>
+          <h3 id="occupancyRate">0%</h3>
+          <p>Occupancy Rate</p>
+        </div>
+        <div class="stat-card">
+          <i class="fas fa-dollar-sign"></i>
+          <h3 id="avgRent">₹0</h3>
+          <p>Average Rent</p>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="controls-row">
+          <div class="search-box">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="Search units by number, type, or amenities..."
+            />
+            <i class="fas fa-search"></i>
+          </div>
+          <button class="btn btn-success" onclick="openAddUnitModal()">
+            <i class="fas fa-plus"></i> Add New Unit
+          </button>
+        </div>
+
+        <div class="controls-row">
+          <div class="filter-group">
+            <select id="propertyFilter">
+              <option value="">All Properties</option>
+            </select>
+            <select id="statusFilter">
+              <option value="">All Status</option>
+              <option value="available">Available</option>
+              <option value="occupied">Occupied</option>
+              <option value="maintenance">Maintenance</option>
+              <option value="reserved">Reserved</option>
+            </select>
+            <select id="typeFilter">
+              <option value="">All Types</option>
+              <option value="1BHK">1BHK</option>
+              <option value="2BHK">2BHK</option>
+              <option value="3BHK">3BHK</option>
+              <option value="4BHK">4BHK</option>
+              <option value="Studio">Studio</option>
+              <option value="Penthouse">Penthouse</option>
+              <option value="Office">Office</option>
+              <option value="Shop">Shop</option>
+              <option value="Warehouse">Warehouse</option>
+            </select>
+            <input type="number" id="minRentFilter" placeholder="Min Rent" />
+            <input type="number" id="maxRentFilter" placeholder="Max Rent" />
+            <button class="btn btn-primary" onclick="applyFilters()">
+              <i class="fas fa-filter"></i> Apply Filters
+            </button>
+            <button class="btn btn-warning" onclick="clearFilters()">
+              <i class="fas fa-times"></i> Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="loadingIndicator" class="loading" style="display: none">
+        <i class="fas fa-spinner"></i>
+        <p>Loading units...</p>
+      </div>
+
+      <div class="units-grid" id="unitsGrid">
+        <!-- Units will be populated here -->
+      </div>
+
+      <div class="pagination" id="pagination">
+        <!-- Pagination will be populated here -->
+      </div>
+    </div>
+
+    <!-- Add/Edit Unit Modal -->
+    <div id="unitModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">Add New Unit</h2>
+          <span class="close" onclick="closeModal()">&times;</span>
+        </div>
+        <form id="unitForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="unit_number">Unit Number *</label>
+              <input type="text" id="unit_number" name="unit_number" required />
+            </div>
+            <div class="form-group">
+              <label for="property">Property *</label>
+              <select id="property" name="property" required>
+                <option value="">Select Property</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="type">Type *</label>
+              <select id="type" name="type" required>
+                <option value="">Select Type</option>
+                <option value="1BHK">1BHK</option>
+                <option value="2BHK">2BHK</option>
+                <option value="3BHK">3BHK</option>
+                <option value="4BHK">4BHK</option>
+                <option value="Studio">Studio</option>
+                <option value="Penthouse">Penthouse</option>
+                <option value="Office">Office</option>
+                <option value="Shop">Shop</option>
+                <option value="Warehouse">Warehouse</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="floor">Floor *</label>
+              <input type="number" id="floor" name="floor" min="0" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="area">Area *</label>
+              <input type="number" id="area" name="area" min="1" required />
+            </div>
+            <div class="form-group">
+              <label for="area_unit">Area Unit</label>
+              <select id="area_unit" name="area_unit">
+                <option value="sqft">Square Feet</option>
+                <option value="sqm">Square Meters</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="rent">Rent *</label>
+              <input type="number" id="rent" name="rent" min="0" required />
+            </div>
+            <div class="form-group">
+              <label for="security_deposit">Security Deposit *</label>
+              <input
+                type="number"
+                id="security_deposit"
+                name="security_deposit"
+                min="0"
+                required
+              />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="maintenance_fee">Maintenance Fee</label>
+            <input
+              type="number"
+              id="maintenance_fee"
+              name="maintenance_fee"
+              min="0"
+              value="0"
+            />
+          </div>
+
+          <div class="form-group">
+            <label>Amenities</label>
+            <div class="checkbox-group">
+              <div class="checkbox-item">
+                <input type="checkbox" id="ac" name="amenities" value="AC" />
+                <label for="ac">AC</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="heating"
+                  name="amenities"
+                  value="Heating"
+                />
+                <label for="heating">Heating</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="balcony"
+                  name="amenities"
+                  value="Balcony"
+                />
+                <label for="balcony">Balcony</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="parking"
+                  name="amenities"
+                  value="Parking"
+                />
+                <label for="parking">Parking</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="furnished"
+                  name="amenities"
+                  value="Furnished"
+                />
+                <label for="furnished">Furnished</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="wifi"
+                  name="amenities"
+                  value="Wifi"
+                />
+                <label for="wifi">WiFi</label>
+              </div>
+              <div class="checkbox-item">
+                <input type="checkbox" id="gym" name="amenities" value="Gym" />
+                <label for="gym">Gym</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="pool"
+                  name="amenities"
+                  value="Pool"
+                />
+                <label for="pool">Pool</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="elevator"
+                  name="amenities"
+                  value="Elevator"
+                />
+                <label for="elevator">Elevator</label>
+              </div>
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="security"
+                  name="amenities"
+                  value="Security"
+                />
+                <label for="security">Security</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="description">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              placeholder="Enter unit description..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-save"></i> Save Unit
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let units = [];
+      let properties = [];
+      let currentPage = 1;
+      let totalPages = 1;
+      let editingUnitId = null;
+    </script>
+    <script src="unit/config.js"></script>
+    <script src="unit/init.js"></script>
+    <script src="unit/applyFilters.js"></script>
+    <script src="unit/clearFilters.js"></script>
+    <script src="unit/closeModal.js"></script>
+    <script src="unit/debounce.js"></script>
+    <script src="unit/deleteUnit.js"></script>
+    <script src="unit/displayUnits.js"></script>
+    <script src="unit/editUnit.js"></script>
+    <script src="unit/eventListeners.js"></script>
+    <script src="unit/generateMockUnits.js"></script>
+    <script src="unit/handleFormSubmit.js"></script>
+    <script src="unit/handleSearch.js"></script>
+    <script src="unit/loadProperties.js"></script>
+    <script src="unit/loadStats.js"></script>
+    <script src="unit/loadUnits.js"></script>
+    <script src="unit/openAddUnitModal.js"></script>
+    <script src="unit/populatePropertyDropdowns.js"></script>
+    <script src="unit/updatePagination.js"></script>
+    <script src="unit/updateStatsDisplay.js"></script>
+    <script src="unit/updateUnitStatus.js"></script>
+  </body>
+</html>
