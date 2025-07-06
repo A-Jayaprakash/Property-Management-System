@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Property Management System - Tenant Dashboard</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/home-tenant.css" />
+  </head>
+  <body>
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <div class="user-info">
+              <div class="user-avatar" id="userAvatar">--</div>
+              <div class="user-details">
+                <h4 id="userName">Loading...</h4>
+                <div class="user-role" id="userRole">TENANT</div>
+              </div>
+            </div>
+            <button class="btn btn-secondary" id="themeToggle">
+              <i class="fas fa-moon"></i>
+              <span>Dark Mode</span>
+            </button>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i>
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container">
+        <div class="dashboard-header fade-in">
+          <h1>Available Properties & Units</h1>
+          <p>Browse and explore available properties and units in your area</p>
+        </div>
+
+        <div class="tenant-stats fade-in">
+          <div class="stat-card">
+            <div class="stat-number" id="totalProperties">Loading...</div>
+            <div class="stat-label">Total Properties</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="availableUnits">Loading...</div>
+            <div class="stat-label">Available Units</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-number" id="avgRent">Loading...</div>
+            <div class="stat-label">Average Rent</div>
+          </div>
+        </div>
+
+        <div class="property-filters slide-in">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="propertyType">Property Type</label>
+              <select id="propertyType">
+                <option value="">All Types</option>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="condo">Condo</option>
+                <option value="villa">Villa</option>
+                <option value="studio">Studio</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="locality">Locality</label>
+              <input type="text" id="locality" placeholder="Enter locality" />
+            </div>
+            <div class="filter-group">
+              <label for="minUnits">Min Units</label>
+              <input type="number" id="minUnits" placeholder="1" min="1" />
+            </div>
+            <div class="filter-group">
+              <label for="maxUnits">Max Units</label>
+              <input type="number" id="maxUnits" placeholder="100" min="1" />
+            </div>
+          </div>
+          <div class="filter-actions">
+            <button class="btn btn-secondary" onclick="clearFilters()">
+              <i class="fas fa-times"></i>
+              Clear Filters
+            </button>
+            <button class="btn btn-primary" onclick="applyFilters()">
+              <i class="fas fa-search"></i>
+              Apply Filters
+            </button>
+          </div>
+        </div>
+
+        <div class="loading-spinner" id="loadingSpinner">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading properties and units...</p>
+        </div>
+
+        <div class="properties-grid" id="propertiesGrid">
+          <!-- Properties will be loaded dynamically -->
+        </div>
+
+        <div
+          class="no-properties"
+          id="noPropertiesMessage"
+          style="display: none"
+        >
+          <i class="fas fa-home"></i>
+          <h3>No Properties Found</h3>
+          <p>
+            Try adjusting your filters or check back later for new listings.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Global variables
+      let allProperties = [];
+      let allUnits = [];
+      let filteredProperties = [];
+      let currentUser = null;
+
+      // Theme toggle functionality
+      const themeToggle = document.getElementById("themeToggle");
+      const body = document.body;
+      let currentTheme = "light";
+    </script>
+    <script src="./home-tenant/applyFilters.js"></script>
+    <script src="./home-tenant/clearFilters.js"></script>
+    <script src="./home-tenant/contactProperty.js"></script>
+    <script src="./home-tenant/eventListeners.js"></script>
+    <script src="./home-tenant/fetchCurrentUser.js"></script>
+    <script src="./home-tenant/fetchPropertiesAndUnits.js"></script>
+    <script src="./home-tenant/getAuthHeaders.js"></script>
+    <script src="./home-tenant/getAuthToken.js"></script>
+    <script src="./home-tenant/init.js"></script>
+    <script src="./home-tenant/logout.js"></script>
+    <script src="./home-tenant/renderProperties.js"></script>
+    <script src="./home-tenant/showErrorMessage.js"></script>
+    <script src="./home-tenant/updateStats.js"></script>
+    <script src="./home-tenant/updateThemeButton.js"></script>
+    <script src="./home-tenant/updateUserDisplay.js"></script>
+    <script src="./home-tenant/viewPropertyDetails.js"></script>
+  </body>
+</html>

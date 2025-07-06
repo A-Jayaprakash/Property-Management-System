@@ -49,10 +49,38 @@
     </div>
 
     <script>
+      // Theme functionality
+      function toggleTheme() {
+        const currentTheme =
+          document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+        document.documentElement.setAttribute("data-theme", newTheme);
+
+        const themeToggle = document.querySelector(".theme-toggle");
+        themeToggle.textContent = newTheme === "dark" ? "☀️" : "🌙";
+
+        // Save theme preference
+        localStorage.setItem("theme", newTheme);
+      }
+
+      // Theme initialization
       document.addEventListener("DOMContentLoaded", function () {
-        document.documentElement.setAttribute("data-theme", "light");
-        window.currentTheme = "light";
+        const savedTheme = localStorage.getItem("theme") || "light";
+        document.documentElement.setAttribute("data-theme", savedTheme);
+        document.querySelector(".theme-toggle").textContent =
+          savedTheme === "dark" ? "☀️" : "🌙";
       });
+
+      // Storage utility - consistent with config.js
+      const storage = {
+        get: (key) => sessionStorage.getItem(key),
+        set: (key, value) => sessionStorage.setItem(key, value),
+        remove: (key) => sessionStorage.removeItem(key),
+        clear: () => sessionStorage.clear(),
+      };
+
+      // Clear any existing session on page load
+      storage.clear();
 
       const loginForm = document.getElementById("loginForm");
       const messageDiv = document.getElementById("message");
@@ -61,15 +89,23 @@
       loginForm.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const username = document.getElementById("username").value;
+        const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
+
+        // Basic validation
+        if (!username || !password) {
+          showMessage("Please fill in all fields", "error");
+          return;
+        }
 
         // Disable button and show loading
         loginBtn.disabled = true;
         loginBtn.textContent = "Signing In...";
 
         try {
-          const res = await fetch("http://localhost:3000/api/auth/login", {
+          console.log("Attempting login for user:", username);
+
+          const response = await fetch("http://localhost:3000/api/auth/login", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -77,31 +113,80 @@
             body: JSON.stringify({ username, password }),
           });
 
-          const data = await res.json();
+          const data = await response.json();
 
-          if (!res.ok) {
-            showMessage(data.message || "Login failed", "error");
-            return;
+          if (!response.ok) {
+            throw new Error(data.message || `Login failed: ${response.status}`);
           }
+
+          // Validate response data
+          if (!data.token || !data.user) {
+            throw new Error("Invalid response from server");
+          }
+
+          console.log("Login successful for user:", data.user.username);
+          console.log("User role:", data.user.role);
 
           showMessage(data.message || "Login successful!", "success");
 
-          sessionStorage.setItem("authToken", data.token);
-          sessionStorage.setItem("userData", JSON.stringify(data.user));
+          // Store authentication data in sessionStorage
+          storage.set("authToken", data.token);
+          storage.set("userData", JSON.stringify(data.user));
 
+          // Role-based redirection
           setTimeout(() => {
-            window.location.href = "index.html";
+            const userRole = data.user.role?.toLowerCase();
+
+            if (userRole === "tenant") {
+              console.log("Redirecting to tenant dashboard");
+              window.location.href = "home-tenant.html";
+            } else if (userRole === "manager" || userRole === "admin") {
+              console.log("Redirecting to manager dashboard");
+              window.location.href = "home.html";
+            } else {
+              // Default fallback - redirect to manager dashboard
+              console.log("Unknown role, redirecting to manager dashboard");
+              window.location.href = "home.html";
+            }
           }, 1500);
-        } catch (err) {
-          console.error(err);
-          showMessage("Server error. Please try again.", "error");
+        } catch (error) {
+          console.error("Login error:", error);
+
+          // Show appropriate error message
+          let errorMessage = "Login failed. Please try again.";
+
+          if (error.message.includes("401")) {
+            errorMessage = "Invalid username or password.";
+          } else if (
+            error.message.includes("Network") ||
+            error.message.includes("fetch")
+          ) {
+            errorMessage = "Network error. Please check your connection.";
+          } else if (error.message.includes("500")) {
+            errorMessage = "Server error. Please try again later.";
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+
+          showMessage(errorMessage, "error");
         } finally {
+          // Re-enable button
           loginBtn.disabled = false;
           loginBtn.textContent = "Sign In";
         }
       });
+
+      // Auto-clear messages after 5 seconds
+      function showMessage(message, type) {
+        const messageDiv = document.getElementById("message");
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${type}`;
+        messageDiv.style.display = "block";
+
+        setTimeout(() => {
+          messageDiv.style.display = "none";
+        }, 5000);
+      }
     </script>
-    <script src="property/toggleTheme.js"></script>
-    <script src="auth/showMessage.js"></script>
   </body>
 </html>

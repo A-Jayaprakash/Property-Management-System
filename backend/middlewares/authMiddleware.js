@@ -4,30 +4,71 @@ const User = require("../models/User");
 // Verify JWT token
 const verifyToken = async (req, res, next) => {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    const authHeader = req.header("Authorization");
 
-    if (!token) {
-      return res
-        .status(401)
-        .json({ message: "Access denied. No token provided." });
+    // Check if Authorization header exists
+    if (!authHeader) {
+      return res.status(401).json({
+        message: "Access denied. No authorization header provided.",
+      });
     }
 
+    // Check if it starts with "Bearer "
+    if (!authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({
+        message:
+          "Access denied. Invalid authorization format. Use 'Bearer <token>'",
+      });
+    }
+
+    const token = authHeader.replace("Bearer ", "");
+
+    // Check if token exists after removing Bearer prefix
+    if (!token || token === "null" || token === "undefined") {
+      return res.status(401).json({
+        message: "Access denied. No token provided.",
+      });
+    }
+
+    // Log the token for debugging (remove in production)
+    console.log("Token received:", token.substring(0, 20) + "...");
+
+    // Verify the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Token decoded successfully:", decoded.id);
 
     // Get user from database to ensure user still exists
     const user = await User.findById(decoded.id).select("-password");
 
     if (!user) {
-      return res
-        .status(401)
-        .json({ message: "Token is not valid. User not found." });
+      return res.status(401).json({
+        message: "Token is not valid. User not found.",
+      });
     }
 
     req.user = user;
     next();
   } catch (error) {
     console.error("Token verification error:", error);
-    res.status(401).json({ message: "Token is not valid." });
+
+    // Provide specific error messages based on error type
+    if (error.name === "JsonWebTokenError") {
+      return res.status(401).json({
+        message: "Invalid token format. Please login again.",
+      });
+    } else if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        message: "Token has expired. Please login again.",
+      });
+    } else if (error.name === "NotBeforeError") {
+      return res.status(401).json({
+        message: "Token not active yet.",
+      });
+    } else {
+      return res.status(401).json({
+        message: "Token verification failed.",
+      });
+    }
   }
 };
 
