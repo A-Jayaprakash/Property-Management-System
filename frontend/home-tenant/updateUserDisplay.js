@@ -1,4 +1,3 @@
-// Update user display in header
 function updateUserDisplay() {
   if (currentUser) {
     const userName = document.getElementById("userName");

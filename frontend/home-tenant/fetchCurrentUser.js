@@ -1,7 +1,6 @@
-// Fetch current user information
 async function fetchCurrentUser() {
   try {
-    const response = await fetch("/api/auth/me", {
+    const response = await fetch("/api/auth/", {
       method: "GET",
       headers: getAuthHeaders(),
     });
