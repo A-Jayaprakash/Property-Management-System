@@ -1,81 +1,97 @@
 const express = require("express");
 const router = express.Router();
-const tenantController = require("../controllers/tenantController");
-const { verifyToken } = require("../middlewares/authMiddleware");
-const { body, validationResult } = require("express-validator");
+const {
+  createTenant,
+  getAllTenants,
+  getTenantById,
+  updateTenant,
+  deleteTenant,
+  relocateTenant,
+  getTenantsByUnit,
+  getExpiringLeases,
+  getTenantStats,
+  extendLease,
+} = require("../controllers/tenantController");
 
-// Validation middleware for tenant creation
-const validateTenant = [
-  body("name")
-    .notEmpty()
-    .withMessage("Name is required")
-    .isLength({ min: 2, max: 50 })
-    .withMessage("Name must be between 2 and 50 characters"),
+const {
+  createTenantValidation,
+  updateTenantValidation,
+  tenantIdValidation,
+  queryValidation,
+  relocateTenantValidation,
+} = require("../validators/tenantValidator");
 
-  body("email").isEmail().withMessage("Please provide a valid email address"),
+// @route   POST /api/tenants
+// @desc    Create a new tenant
+// @access  Private
+router.post("/", createTenantValidation, createTenant);
 
-  body("phone")
-    .matches(/^\d{10}$/)
-    .withMessage("Phone number must be exactly 10 digits"),
+// @route   GET /api/tenants
+// @desc    Get all tenants with filtering and pagination
+// @access  Private
+router.get("/", queryValidation, getAllTenants);
 
-  body("assigned_unit")
-    .notEmpty()
-    .withMessage("Assigned unit is required")
-    .isMongoId()
-    .withMessage("Invalid unit ID"),
+// @route   GET /api/tenants/stats
+// @desc    Get tenant statistics
+// @access  Private
+router.get("/stats", getTenantStats);
 
-  body("address")
-    .optional()
-    .isLength({ max: 200 })
-    .withMessage("Address cannot exceed 200 characters"),
+// @route   GET /api/tenants/expiring-leases
+// @desc    Get tenants with expiring leases
+// @access  Private
+router.get("/expiring-leases", getExpiringLeases);
 
-  body("lease_start")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid lease start date"),
+// @route   GET /api/tenants/unit/:unit
+// @desc    Get tenants by unit
+// @access  Private
+router.get("/unit/:unit", getTenantsByUnit);
 
-  body("lease_end")
-    .optional()
-    .isISO8601()
-    .withMessage("Invalid lease end date"),
+// @route   GET /api/tenants/:id
+// @desc    Get a single tenant by ID
+// @access  Private
+router.get("/:id", tenantIdValidation, getTenantById);
 
-  body("status")
-    .optional()
-    .isIn(["active", "inactive", "terminated"])
-    .withMessage("Status must be active, inactive, or terminated"),
-];
+// @route   PUT /api/tenants/:id
+// @desc    Update a tenant
+// @access  Private
+router.put("/:id", updateTenantValidation, updateTenant);
 
-// Validation error handler
-const handleValidationErrors = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      message: "Validation failed",
-      errors: errors.array(),
-    });
-  }
-  next();
-};
+// @route   PATCH /api/tenants/:id/relocate
+// @desc    Relocate tenant to a different unit
+// @access  Private
+router.patch("/:id/relocate", relocateTenantValidation, relocateTenant);
 
-// Routes
-router.post(
-  "/register",
-  verifyToken,
-  validateTenant,
-  handleValidationErrors,
-  tenantController.createTenant
+// @route   PATCH /api/tenants/:id/extend-lease
+// @desc    Extend lease for a tenant
+// @access  Private
+router.patch(
+  "/:id/extend-lease",
+  [
+    tenantIdValidation[0], // Only the param validation
+    require("express-validator")
+      .body("newEndDate")
+      .isISO8601()
+      .toDate()
+      .withMessage("Please provide a valid new end date"),
+    (req, res, next) => {
+      const { validationResult } = require("express-validator");
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          message: "Validation failed",
+          errors: errors.array(),
+        });
+      }
+      next();
+    },
+  ],
+  extendLease
 );
 
-router.get("/", verifyToken, tenantController.getAllTenant);
-
-router.put(
-  "/:id",
-  verifyToken,
-  validateTenant,
-  handleValidationErrors,
-  tenantController.updateTenant
-);
-
-router.delete("/:id", verifyToken, tenantController.deleteTenant);
+// @route   DELETE /api/tenants/:id
+// @desc    Delete a tenant
+// @access  Private
+router.delete("/:id", tenantIdValidation, deleteTenant);
 
 module.exports = router;

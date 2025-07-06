@@ -10,8 +10,8 @@ dotenv.config();
 
 // Import custom modules
 const propertyRoutes = require("./routes/propertyRoutes");
-const tenantRoutes = require("./routes/tenantRoutes");
 const unitRoutes = require("./routes/unitRoutes");
+const tenantRoutes = require("./routes/tenantRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -83,6 +83,9 @@ app.get("/debug", (req, res) => {
     routes: {
       auth: "/api/auth",
       authTest: "/api/auth/test",
+      properties: "/api/properties",
+      tenants: "/api/tenants",
+      units: "/api/units",
     },
   });
 });

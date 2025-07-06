@@ -17,6 +17,19 @@ function renderProperties(properties) {
       const availableUnits = hasUnits
         ? property.units.filter((unit) => unit.status === "available")
         : [];
+
+      // FIX: Check for available units more accurately
+      const isAvailable = availableUnits.length > 0;
+
+      // Debug logging to help identify the issue
+      console.log(`Property ${property.name}:`, {
+        hasUnits,
+        totalUnits: property.units ? property.units.length : 0,
+        availableUnits: availableUnits.length,
+        unitStatuses: property.units ? property.units.map((u) => u.status) : [],
+        isAvailable,
+      });
+
       const minRent =
         hasUnits && availableUnits.length > 0
           ? Math.min(...availableUnits.map((unit) => unit.rent || 0))
@@ -31,13 +44,9 @@ function renderProperties(properties) {
                 <div class="property-image">
                   <i class="fas fa-building"></i>
                   <div class="property-status ${
-                    property.availableUnits > 0 ? "available" : "occupied"
+                    isAvailable ? "available" : "occupied"
                   }">
-                    ${
-                      property.availableUnits > 0
-                        ? "Available"
-                        : "Fully Occupied"
-                    }
+                    ${isAvailable ? "Available" : "Fully Occupied"}
                   </div>
                 </div>
                 <div class="property-content">
@@ -70,7 +79,7 @@ function renderProperties(properties) {
                     </div>
                     <div class="property-detail">
                       <i class="fas fa-check-circle"></i>
-                      <span>${property.availableUnits} Available</span>
+                      <span>${availableUnits.length} Available</span>
                     </div>
                     <div class="property-detail">
                       <i class="fas fa-calendar-alt"></i>
@@ -94,7 +103,7 @@ function renderProperties(properties) {
                   }
                   <div class="property-description">
                     Property with ${property.totalUnits} units. ${
-        property.availableUnits
+        availableUnits.length
       } units currently available for rent.
                   </div>
                   
@@ -143,20 +152,20 @@ function renderProperties(properties) {
                       View Details
                     </button>
                     <button class="btn ${
-                      property.availableUnits > 0
+                      availableUnits.length > 0
                         ? "btn-primary"
                         : "btn-secondary"
                     }" 
                             ${
-                              property.availableUnits > 0
+                              availableUnits.length > 0
                                 ? `onclick="contactProperty('${property._id}')"`
                                 : "disabled"
                             }>
                       <i class="fas ${
-                        property.availableUnits > 0 ? "fa-envelope" : "fa-ban"
+                        availableUnits.length > 0 ? "fa-envelope" : "fa-ban"
                       }"></i>
                       ${
-                        property.availableUnits > 0
+                        availableUnits.length > 0
                           ? "Contact"
                           : "No Units Available"
                       }
