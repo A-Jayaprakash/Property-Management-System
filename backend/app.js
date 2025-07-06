@@ -75,8 +75,23 @@ app.get("/", (req, res) => {
   });
 });
 
-// API Routes
+// Debug route to test server
+app.get("/debug", (req, res) => {
+  res.json({
+    message: "Debug endpoint working",
+    timestamp: new Date().toISOString(),
+    routes: {
+      auth: "/api/auth",
+      authTest: "/api/auth/test",
+    },
+  });
+});
+
+// API Routes - Order matters! More specific routes should come first
+console.log("Registering auth routes...");
 app.use("/api/auth", authRoutes);
+
+console.log("Registering protected routes...");
 app.use("/api/properties", verifyToken, propertyRoutes);
 app.use("/api/tenants", verifyToken, tenantRoutes);
 app.use("/api/units", verifyToken, unitRoutes);
@@ -91,7 +106,8 @@ app.get(/^\/(?!api).*/, (req, res) => {
 
 // Handle 404 for API routes
 app.use("/api/*", (req, res) => {
-  res.status(404).json({ message: "API endpoint not found" });
+  console.log("404 - API endpoint not found:", req.path);
+  res.status(404).json({ message: "API endpoint not found", path: req.path });
 });
 
 // Global error handler
@@ -112,6 +128,7 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`🌱 Environment: ${process.env.NODE_ENV || "development"}`);
   console.log(`📚 API Documentation:`);
   console.log(`   - Authentication: http://localhost:${PORT}/api/auth`);
+  console.log(`   - Auth Test: http://localhost:${PORT}/api/auth/test`);
   console.log(`   - Properties: http://localhost:${PORT}/api/properties`);
   console.log(`   - Tenants: http://localhost:${PORT}/api/tenants`);
   console.log(`   - Units: http://localhost:${PORT}/api/units`);

@@ -8,11 +8,14 @@ const {
   hashPassword,
   comparePassword,
 } = require("../utils/authUtils");
+const { verifyToken } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
 
+// Public routes (no authentication required)
 router.post("/login", async (req, res) => {
   try {
+    console.log("POST /api/auth/login called");
     const { username, password } = req.body;
     const user = await User.findOne({ username });
     if (!user) {
@@ -44,6 +47,7 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
+    console.log("POST /api/auth/register called");
     const { name, username, email, phone, password, role } = req.body;
     const existingUser = await User.findOne({ username });
     if (existingUser) {
@@ -74,6 +78,36 @@ router.post("/register", async (req, res) => {
     console.log("Registration Failed:", error);
     return res.status(500).json({ message: "Internal Server Error" });
   }
+});
+
+// Protected route (requires authentication)
+router.get("/", verifyToken, async (req, res) => {
+  try {
+    console.log("GET /api/auth called");
+    console.log("req.user:", req.user);
+
+    if (!req.user) {
+      return res.status(401).json({ message: "User not authenticated" });
+    }
+
+    // Since verifyToken middleware already fetches the user, just return it
+    res.status(200).json({
+      id: req.user._id,
+      name: req.user.name,
+      username: req.user.username,
+      email: req.user.email,
+      role: req.user.role,
+    });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+});
+
+// Debug route to check if routes are working
+router.get("/test", (req, res) => {
+  console.log("GET /api/auth/test called");
+  res.json({ message: "Auth routes are working!" });
 });
 
 module.exports = router;

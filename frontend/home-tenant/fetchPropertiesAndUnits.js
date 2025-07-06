@@ -1,6 +1,4 @@
-// Enhanced fetchPropertiesAndUnits.js with backend URL configuration
-const API_BASE_URL = "http://localhost:3000"; // Add this line at the top
-
+// Enhanced fetchPropertiesAndUnits.js with better error handling
 async function fetchPropertiesAndUnits() {
   try {
     document.getElementById("loadingSpinner").style.display = "block";
@@ -22,11 +20,13 @@ async function fetchPropertiesAndUnits() {
     console.log("Fetching properties...");
 
     // Fetch properties with better error handling
-    const propertiesResponse = await fetch(`${API_BASE_URL}/api/properties`, {
-      // Updated URL
-      method: "GET",
-      headers: headers,
-    });
+    const propertiesResponse = await fetch(
+      "http://localhost:3000/api/properties",
+      {
+        method: "GET",
+        headers: headers,
+      }
+    );
 
     console.log("Properties response status:", propertiesResponse.status);
 
@@ -83,8 +83,7 @@ async function fetchPropertiesAndUnits() {
     // Fetch units with fallback
     try {
       console.log("Fetching units...");
-      const unitsResponse = await fetch(`${API_BASE_URL}/api/units`, {
-        // Updated URL
+      const unitsResponse = await fetch("http://localhost:3000/api/units", {
         method: "GET",
         headers: headers,
       });
@@ -109,9 +108,6 @@ async function fetchPropertiesAndUnits() {
           unitsResponse.status
         );
         allUnits = [];
-
-        // If units endpoint is not available, create mock units from properties
-        allUnits = createMockUnitsFromProperties(allProperties);
       }
     } catch (error) {
       console.log("Error fetching units:", error);
@@ -171,47 +167,6 @@ async function fetchPropertiesAndUnits() {
     document.getElementById("propertiesGrid").style.display = "grid";
   }
 }
-
-// Add retry function
-function retryFetchData() {
-  fetchPropertiesAndUnits();
-}
-
-// Update UI
-document.getElementById("loadingSpinner").style.display = "none";
-document.getElementById("propertiesGrid").style.display = "grid";
-document.getElementById("noPropertiesMessage").style.display = "none";
-
-updateStats();
-renderProperties(filteredProperties);
-
-// Show success message
-const successMessage = document.createElement("div");
-successMessage.innerHTML = `
-    <div style="
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: linear-gradient(135deg, #48bb78, #38a169);
-      color: white;
-      padding: 1rem 1.5rem;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 1000;
-      animation: slideIn 0.3s ease-out;
-    ">
-      <div style="display: flex; align-items: center; gap: 0.5rem;">
-        <i class="fas fa-check-circle"></i>
-        <span>Demo mode loaded successfully!</span>
-      </div>
-    </div>
-  `;
-document.body.appendChild(successMessage);
-
-// Remove message after 3 seconds
-setTimeout(() => {
-  successMessage.remove();
-}, 3000);
 
 // Show API unavailable message with fallback options
 function showAPIUnavailableMessage() {
