@@ -1,4 +1,3 @@
-// Load tenants from API
 async function loadTenants() {
   try {
     document.getElementById("loadingState").style.display = "block";
@@ -17,7 +16,10 @@ async function loadTenants() {
       throw new Error("Failed to load tenants");
     }
 
-    tenants = await response.json();
+    const data = await response.json();
+    console.log("Tenants API response:", data);
+
+    tenants = Array.isArray(data) ? data : data.tenants || [];
     filteredTenants = [...tenants];
 
     document.getElementById("loadingState").style.display = "none";

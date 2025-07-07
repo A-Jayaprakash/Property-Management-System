@@ -11,30 +11,36 @@ async function saveTenant(e) {
     status: document.getElementById("status").value,
     leaseStartDate: document.getElementById("leaseStartDate").value,
     leaseEndDate: document.getElementById("leaseEndDate").value,
+    propertyId: document.getElementById("propertySelect").value,
     monthlyRent: parseFloat(document.getElementById("monthlyRent").value) || 0,
     securityDeposit:
       parseFloat(document.getElementById("securityDeposit").value) || 0,
-    emergencyName: document.getElementById("emergencyName").value,
-    emergencyPhone: document.getElementById("emergencyPhone").value,
-    emergencyRelationship: document.getElementById("emergencyRelationship")
-      .value,
+    emergencyContact: {
+      name: document.getElementById("emergencyName").value,
+      phoneNumber: document.getElementById("emergencyPhone").value,
+      relationship: document.getElementById("emergencyRelationship").value,
+    },
     notes: document.getElementById("notes").value,
     managerId: managerId,
   };
+  console.log("Tenant data being sent:", tenantData);
 
   try {
     let response;
     if (editingTenant) {
-      response = await fetch(`/api/tenants/${editingTenant.id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify(tenantData),
-      });
+      response = await fetch(
+        `http://localhost:3000/api/tenants/${editingTenant.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+          },
+          body: JSON.stringify(tenantData),
+        }
+      );
     } else {
-      response = await fetch("/api/tenants", {
+      response = await fetch("http://localhost:3000/api/tenants", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

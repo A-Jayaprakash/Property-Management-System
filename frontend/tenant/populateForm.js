@@ -17,7 +17,7 @@ function populateForm(tenant) {
   document.getElementById("notes").value = tenant.notes || "";
 
   // Set property based on unit
-  const unitData = units.find((u) => u.id === tenant.assignedUnit);
+  const unitData = units.find((u) => (u.id || u._id) === tenant.assignedUnit);
   if (unitData) {
     document.getElementById("propertySelect").value = unitData.propertyId;
     loadUnitsForProperty().then(() => {

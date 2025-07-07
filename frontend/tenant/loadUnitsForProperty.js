@@ -1,4 +1,3 @@
-// Load units for selected property
 async function loadUnitsForProperty() {
   const propertyId = document.getElementById("propertySelect").value;
   const unitSelect = document.getElementById("assignedUnit");
@@ -13,6 +12,7 @@ async function loadUnitsForProperty() {
     const response = await fetch(
       `http://localhost:3000/api/units?propertyId=${propertyId}&status=available`,
       {
+        method: "GET",
         headers: getAuthHeaders(),
       }
     );
@@ -21,12 +21,15 @@ async function loadUnitsForProperty() {
       throw new Error("Failed to load units");
     }
 
-    const availableUnits = await response.json();
+    const data = await response.json();
+    console.log("API units response:", data);
+
+    const availableUnits = Array.isArray(data) ? data : data.units || [];
 
     availableUnits.forEach((unit) => {
       const option = document.createElement("option");
-      option.value = unit.id;
-      option.textContent = `${unit.unitNumber} - ${unit.unitType} (${unit.bedrooms}BR/${unit.bathrooms}BA)`;
+      option.value = unit.id || unit._id;
+      option.textContent = `${unit.unit_number} - ${unit.type} (${unit.area}sqft)`;
       option.dataset.rent = unit.rent;
       unitSelect.appendChild(option);
     });
