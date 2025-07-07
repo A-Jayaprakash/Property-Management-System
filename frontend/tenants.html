@@ -164,7 +164,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Select Property *</label>
+                <label class="form-label" required>Select Property *</label>
                 <select
                   id="propertySelect"
                   class="form-input"
@@ -206,7 +206,7 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label">Lease Start Date *</label>
+                <label class="form-label" required>Lease Start Date *</label>
                 <input
                   type="date"
                   id="leaseStartDate"
@@ -215,7 +215,7 @@
                 />
               </div>
               <div class="form-group">
-                <label class="form-label">Lease End Date *</label>
+                <label class="form-label" required>Lease End Date *</label>
                 <input
                   type="date"
                   id="leaseEndDate"
@@ -234,25 +234,6 @@
                   class="form-input"
                   step="0.01"
                   min="0"
-                />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Emergency Contact Name</label>
-                <input type="text" id="emergencyName" class="form-input" />
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">Emergency Contact Phone</label>
-                <input type="tel" id="emergencyPhone" class="form-input" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Emergency Contact Relationship</label>
-                <input
-                  type="text"
-                  id="emergencyRelationship"
-                  class="form-input"
                 />
               </div>
             </div>
@@ -309,7 +290,7 @@
     <script src="tenant/getAuthHeaders.js"></script>
     <script src="tenant/getDaysRemaining.js"></script>
     <script src="tenant/getLeaseStatusClass.js"></script>
-    <script src="tenant/init.js"></script>
+
     <script src="tenant/loadProperties.js"></script>
     <script src="tenant/loadTenants.js"></script>
     <script src="tenant/loadUnitsForProperty.js"></script>
@@ -324,5 +305,6 @@
     <script src="tenant/showNotification.js"></script>
     <script src="tenant/updateStats.js"></script>
     <script src="tenant/updateUnitStatus.js"></script>
+    <script src="tenant/init.js"></script>
   </body>
 </html>

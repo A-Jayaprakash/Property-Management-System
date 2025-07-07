@@ -28,9 +28,11 @@ async function loadUnitsForProperty() {
 
     availableUnits.forEach((unit) => {
       const option = document.createElement("option");
-      option.value = unit.id || unit._id;
+      // Change this line: use unit_number instead of unit ID
+      option.value = unit.unit_number;
       option.textContent = `${unit.unit_number} - ${unit.type} (${unit.area}sqft)`;
       option.dataset.rent = unit.rent;
+      option.dataset.unitId = unit.id || unit._id; // Store the actual unit ID as data attribute
       unitSelect.appendChild(option);
     });
 

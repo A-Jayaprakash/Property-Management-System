@@ -105,26 +105,6 @@ const createTenantValidation = [
     .isFloat({ min: 0 })
     .withMessage("Security deposit must be a positive number"),
 
-  body("emergencyContact.name")
-    .optional()
-    .trim()
-    .isLength({ max: 100 })
-    .withMessage("Emergency contact name must not exceed 100 characters"),
-
-  body("emergencyContact.relationship")
-    .optional()
-    .trim()
-    .isLength({ max: 50 })
-    .withMessage(
-      "Emergency contact relationship must not exceed 50 characters"
-    ),
-
-  body("emergencyContact.phoneNumber")
-    .optional()
-    .trim()
-    .matches(/^[\+]?[\d\s\-\(\)]{10,15}$/)
-    .withMessage("Please provide a valid emergency contact phone number"),
-
   body("notes")
     .optional()
     .trim()

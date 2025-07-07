@@ -1,27 +1,48 @@
 // Populate form with tenant data
-function populateForm(tenant) {
-  document.getElementById("fullName").value = tenant.fullName;
-  document.getElementById("email").value = tenant.email;
-  document.getElementById("phoneNumber").value = tenant.phoneNumber;
-  document.getElementById("assignedUnit").value = tenant.assignedUnit;
-  document.getElementById("status").value = tenant.status;
-  document.getElementById("leaseStartDate").value = tenant.leaseStartDate;
-  document.getElementById("leaseEndDate").value = tenant.leaseEndDate;
+async function populateForm(tenant) {
+  // Basic tenant information
+  document.getElementById("fullName").value = tenant.fullName || "";
+  document.getElementById("email").value = tenant.email || "";
+  document.getElementById("phoneNumber").value = tenant.phoneNumber || "";
+  document.getElementById("status").value = tenant.status || "Active";
+
+  // Format dates for input fields
+  if (tenant.leaseStartDate) {
+    const startDate = new Date(tenant.leaseStartDate);
+    document.getElementById("leaseStartDate").value = startDate
+      .toISOString()
+      .split("T")[0];
+  }
+
+  if (tenant.leaseEndDate) {
+    const endDate = new Date(tenant.leaseEndDate);
+    document.getElementById("leaseEndDate").value = endDate
+      .toISOString()
+      .split("T")[0];
+  }
+
+  // Financial information
   document.getElementById("monthlyRent").value = tenant.monthlyRent || "";
   document.getElementById("securityDeposit").value =
     tenant.securityDeposit || "";
-  document.getElementById("emergencyName").value = tenant.emergencyName || "";
-  document.getElementById("emergencyPhone").value = tenant.emergencyPhone || "";
-  document.getElementById("emergencyRelationship").value =
-    tenant.emergencyRelationship || "";
+
+  // Notes
   document.getElementById("notes").value = tenant.notes || "";
 
-  // Set property based on unit
-  const unitData = units.find((u) => (u.id || u._id) === tenant.assignedUnit);
-  if (unitData) {
-    document.getElementById("propertySelect").value = unitData.propertyId;
-    loadUnitsForProperty().then(() => {
-      document.getElementById("assignedUnit").value = tenant.assignedUnit;
-    });
+  // Set property and unit
+  if (tenant.propertyId) {
+    document.getElementById("propertySelect").value = tenant.propertyId;
+
+    // Load units for the property and then set the assigned unit
+    try {
+      await loadUnitsForProperty();
+
+      // Set the assigned unit after units are loaded
+      if (tenant.assignedUnit) {
+        document.getElementById("assignedUnit").value = tenant.assignedUnit;
+      }
+    } catch (error) {
+      console.error("Error loading units for property:", error);
+    }
   }
 }

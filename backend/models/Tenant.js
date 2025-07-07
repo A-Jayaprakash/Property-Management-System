@@ -9,6 +9,7 @@ const tenantSchema = new mongoose.Schema(
       minlength: [2, "Full name must be at least 2 characters long"],
       maxlength: [100, "Full name must not exceed 100 characters"],
     },
+
     email: {
       type: String,
       required: [true, "Email is required"],
@@ -20,6 +21,7 @@ const tenantSchema = new mongoose.Schema(
         "Please enter a valid email",
       ],
     },
+
     phoneNumber: {
       type: String,
       required: [true, "Phone number is required"],
@@ -28,12 +30,15 @@ const tenantSchema = new mongoose.Schema(
         /^[\+]?[\d\s\-\(\)]{10,15}$/,
         "Please enter a valid phone number",
       ],
+      unique: true,
     },
+
     assignedUnit: {
       type: String,
       required: [true, "Assigned unit is required"],
       trim: true,
     },
+
     address: {
       street: {
         type: String,
@@ -54,13 +59,15 @@ const tenantSchema = new mongoose.Schema(
       country: {
         type: String,
         trim: true,
-        default: "USA",
+        default: "India",
       },
     },
+
     leaseStartDate: {
       type: Date,
       required: [true, "Lease start date is required"],
     },
+
     leaseEndDate: {
       type: Date,
       required: [true, "Lease end date is required"],
@@ -71,37 +78,28 @@ const tenantSchema = new mongoose.Schema(
         message: "Lease end date must be after lease start date",
       },
     },
+
     status: {
       type: String,
       enum: ["Active", "Inactive", "Pending", "Terminated"],
       default: "Active",
     },
+
     monthlyRent: {
       type: Number,
       min: [0, "Monthly rent cannot be negative"],
     },
+
     securityDeposit: {
       type: Number,
       min: [0, "Security deposit cannot be negative"],
     },
-    emergencyContact: {
-      name: {
-        type: String,
-        trim: true,
-      },
-      relationship: {
-        type: String,
-        trim: true,
-      },
-      phoneNumber: {
-        type: String,
-        trim: true,
-      },
-    },
+
     notes: {
       type: String,
       maxlength: [500, "Notes must not exceed 500 characters"],
     },
+
     propertyId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Property",

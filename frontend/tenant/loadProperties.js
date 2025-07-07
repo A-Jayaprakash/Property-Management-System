@@ -1,22 +1,18 @@
-// Load properties owned by the manager
 async function loadProperties() {
   try {
-    const response = await fetch(
-      `http://localhost:3000/api/properties?managerId=${managerId}`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
-      }
-    );
+    const response = await fetch("http://localhost:3000/api/properties", {
+      headers: getAuthHeaders(),
+    });
 
-    if (!response.ok) {
-      throw new Error("Failed to load properties");
-    }
+    const data = await response.json();
 
-    properties = await response.json();
+    // Save to global array
+    properties = data;
+
+    // Now populate dropdown
     populatePropertySelect();
   } catch (error) {
-    console.error("Error loading properties:", error);
+    console.error("Failed to load properties:", error);
     showNotification("Failed to load properties", "error");
   }
 }
