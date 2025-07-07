@@ -66,7 +66,7 @@ async function saveTenant(e) {
     if (tenantData.status === "Active" && tenantData.unitId) {
       try {
         // Add a small delay to ensure tenant is saved and indexed
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         await updateUnitStatus(tenantData.unitId, "occupied");
         console.log("Unit status updated to occupied");
@@ -86,9 +86,6 @@ async function saveTenant(e) {
 
     closeModal();
     filteredTenants = [...tenants];
-    console.log("Assigned Unit:", tenantData.assignedUnit);
-    console.log("Unit ID:", tenantData.unitId);
-    console.log("Tenant Status:", tenantData.status);
     renderTenants();
     updateStats();
   } catch (error) {
