@@ -5,7 +5,7 @@ function populatePropertySelect() {
 
   properties.forEach((property) => {
     const option = document.createElement("option");
-    option.value = property.id;
+    option.value = property._id;
     option.textContent = `${property.name} - ${property.address}`;
     propertySelect.appendChild(option);
   });

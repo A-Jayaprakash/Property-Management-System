@@ -30,7 +30,6 @@ const tenantSchema = new mongoose.Schema(
         /^[\+]?[\d\s\-\(\)]{10,15}$/,
         "Please enter a valid phone number",
       ],
-      unique: true,
     },
 
     assignedUnit: {

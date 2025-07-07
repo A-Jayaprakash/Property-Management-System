@@ -69,7 +69,7 @@ async function saveTenant(e) {
     }
 
     // Update unit status to occupied - use unitId if available, otherwise use assignedUnit
-    const unitToUpdate = tenantData.unitId || tenantData.assignedUnit;
+    const unitToUpdate = tenantData.unitId;
     await updateUnitStatus(unitToUpdate, "occupied");
 
     closeModal();
