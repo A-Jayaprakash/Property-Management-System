@@ -166,7 +166,7 @@ unitSchema.index({ created_by: 1 });
 unitSchema.virtual("current_tenant", {
   ref: "Tenant",
   localField: "_id",
-  foreignField: "assigned_unit",
+  foreignField: "assignedUnit",
   justOne: true,
 });
 

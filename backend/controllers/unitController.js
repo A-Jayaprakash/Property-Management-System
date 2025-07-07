@@ -255,7 +255,7 @@ const deleteUnit = async (req, res) => {
 
     // Check if unit has active tenants
     const activeTenant = await Tenant.findOne({
-      assigned_unit: id,
+      assignedUnit: id,
       status: "active",
     });
 
@@ -339,6 +339,7 @@ const getAvailableUnits = async (req, res) => {
 };
 
 // Update unit status
+// Update unit status
 const updateUnitStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -359,9 +360,13 @@ const updateUnitStatus = async (req, res) => {
 
     // Additional validation for status changes
     if (status === "occupied") {
+      // Check for active tenant using the correct field names and values
       const activeTenant = await Tenant.findOne({
-        assigned_unit: id,
-        status: "active",
+        $or: [
+          { assignedUnit: unit.unit_number }, // Check by unit number
+          { unitId: id }, // Check by unit ID if you store it
+        ],
+        status: "Active", // Capital A to match your tenant status
       });
 
       if (!activeTenant) {

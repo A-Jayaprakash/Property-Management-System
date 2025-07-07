@@ -20,7 +20,7 @@ function renderTenants() {
                 <h3>${tenant.fullName}</h3>
                 <p style="color: #666; margin: 0;">${tenant.email}</p>
               </div>
-              <div class="tenant-status status-${tenant.status.toLowerCase()}">
+              <div class="tenant-status status-${tenant.status}">
                 ${tenant.status}
               </div>
             </div>

@@ -1,4 +1,4 @@
-// Save tenant
+// Save tenant with improved unit status handling
 async function saveTenant(e) {
   e.preventDefault();
 
@@ -62,9 +62,27 @@ async function saveTenant(e) {
       showNotification("Tenant added successfully", "success");
     }
 
-    // Update unit status to occupied - use unitId if available, otherwise use assignedUnit
-    const unitToUpdate = tenantData.unitId;
-    await updateUnitStatus(unitToUpdate, "occupied");
+    // Update unit status to occupied - but only if tenant status is Active
+    if (tenantData.status === "Active" && tenantData.unitId) {
+      try {
+        // Add a small delay to ensure tenant is saved and indexed
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        await updateUnitStatus(tenantData.unitId, "occupied");
+        console.log("Unit status updated to occupied");
+      } catch (unitError) {
+        console.warn(
+          "Failed to update unit status, but tenant was saved:",
+          unitError.message
+        );
+
+        // Show a more informative warning to the user
+        showNotification(
+          "Tenant saved successfully, but unit status could not be updated. Please update manually if needed.",
+          "warning"
+        );
+      }
+    }
 
     closeModal();
     filteredTenants = [...tenants];
