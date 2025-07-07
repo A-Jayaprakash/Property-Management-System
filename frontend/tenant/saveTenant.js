@@ -32,20 +32,14 @@ async function saveTenant(e) {
         `http://localhost:3000/api/tenants/${editingTenant.id}`,
         {
           method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            ...getAuthHeaders(),
-          },
+          headers: getAuthHeaders(),
           body: JSON.stringify(tenantData),
         }
       );
     } else {
       response = await fetch("http://localhost:3000/api/tenants", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify(tenantData),
       });
     }

@@ -133,12 +133,6 @@ tenantSchema.virtual("daysRemaining").get(function () {
   return 0;
 });
 
-// Index for efficient querying
-tenantSchema.index({ assignedUnit: 1, status: 1 });
-tenantSchema.index({ email: 1 });
-tenantSchema.index({ propertyId: 1 });
-tenantSchema.index({ leaseEndDate: 1 });
-
 // Pre-save middleware to format phone number
 tenantSchema.pre("save", function (next) {
   if (this.phoneNumber) {
