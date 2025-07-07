@@ -11,10 +11,13 @@ async function deleteTenant(tenantId) {
   try {
     const tenant = tenants.find((t) => t.id === tenantId);
 
-    const response = await fetch(`/api/tenants/${tenantId}`, {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    });
+    const response = await fetch(
+      `http://localhost:3000/api/tenants/${tenantId}`,
+      {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      }
+    );
 
     if (!response.ok) {
       throw new Error("Failed to delete tenant");
@@ -22,7 +25,7 @@ async function deleteTenant(tenantId) {
 
     // Update unit status to available
     if (tenant) {
-      await updateUnitStatus(tenant.assignedUnit, "available");
+      await updateUnitStatus(tenant.assignedUnit, "Available");
     }
 
     tenants = tenants.filter((t) => t.id !== tenantId);

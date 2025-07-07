@@ -340,33 +340,28 @@ const getAvailableUnits = async (req, res) => {
 
 // Update unit status
 // Update unit status
+// Update unit status
 const updateUnitStatus = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; // this is actually unit_number like "A-100"
     const { status, reason } = req.body;
 
     if (!status) {
-      return res.status(400).json({
-        message: "Status is required",
-      });
+      return res.status(400).json({ message: "Status is required" });
     }
 
-    const unit = await Unit.findById(id);
+    // Find by unit_number instead of _id
+    const unit = await Unit.findOne({ unit_number: id, is_active: true });
+
     if (!unit) {
-      return res.status(404).json({
-        message: "Unit not found",
-      });
+      return res.status(404).json({ message: "Unit not found" });
     }
 
-    // Additional validation for status changes
+    // Additional check if marking as occupied
     if (status === "occupied") {
-      // Check for active tenant using the correct field names and values
       const activeTenant = await Tenant.findOne({
-        $or: [
-          { assignedUnit: unit.unit_number }, // Check by unit number
-          { unitId: id }, // Check by unit ID if you store it
-        ],
-        status: "Active", // Capital A to match your tenant status
+        assignedUnit: unit.unit_number,
+        status: "Active",
       });
 
       if (!activeTenant) {
@@ -376,7 +371,10 @@ const updateUnitStatus = async (req, res) => {
       }
     }
 
-    await unit.updateStatus(status, reason);
+    // Update status
+    unit.status = status;
+    if (reason) unit.status_reason = reason;
+    await unit.save();
 
     res.json({
       message: "Unit status updated successfully",

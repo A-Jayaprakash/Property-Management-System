@@ -80,7 +80,7 @@ function renderTenants() {
                 Relocate
               </button>
               <button class="action-btn btn-danger" onclick="deleteTenant('${
-                tenant.id
+                tenant._id
               }')">
                 <i class="fas fa-trash"></i>
                 Remove

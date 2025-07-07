@@ -1,5 +1,7 @@
 // Update statistics
 function updateStats() {
+  console.log("Tenants array:", tenants);
+
   const activeTenants = tenants.filter((t) => t.status === "Active").length;
   const totalTenants = tenants.length;
   const expiringLeases = tenants.filter((t) => {

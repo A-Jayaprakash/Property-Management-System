@@ -16,8 +16,7 @@ async function loadTenants() {
       throw new Error("Failed to load tenants");
     }
 
-    const data = await response.json();
-    console.log("Tenants API response:", data);
+    const { data } = await response.json();
 
     tenants = Array.isArray(data) ? data : data.tenants || [];
     filteredTenants = [...tenants];
