@@ -1,6 +1,7 @@
 const Unit = require("../models/Unit");
 const Property = require("../models/Property");
 const Tenant = require("../models/Tenant");
+const mongoose = require("mongoose");
 
 // Create a new unit
 const createUnit = async (req, res) => {
@@ -346,12 +347,18 @@ const updateUnitStatus = async (req, res) => {
     const { id } = req.params; // this is actually unit_number like "A-100"
     const { status, reason } = req.body;
 
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid unit ID format" });
+    }
+
     if (!status) {
       return res.status(400).json({ message: "Status is required" });
     }
 
-    // Find by unit_number instead of _id
-    const unit = await Unit.findOne({ unit_number: id, is_active: true });
+    const unit = await Unit.findById(id);
+    if (!unit || !unit.is_active) {
+      return res.status(404).json({ message: "Unit not found" });
+    }
 
     if (!unit) {
       return res.status(404).json({ message: "Unit not found" });

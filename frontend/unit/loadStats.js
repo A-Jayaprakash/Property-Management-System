@@ -4,11 +4,12 @@ async function loadStats() {
     console.log("Loading unit statistics from database...");
 
     const data = await apiRequest("/units/stats");
+    console.log("THIS IS THE UNIT STATS!!!!!", data);
 
-    if (data.stats) {
+    if (data) {
       // Update statistics display
-      updateStatsDisplay(data.stats);
-      console.log("Statistics loaded successfully:", data.stats);
+      updateStatsDisplay(data);
+      console.log("Statistics loaded successfully:", data);
     } else {
       console.warn("No statistics found in database response");
       // Show zero stats

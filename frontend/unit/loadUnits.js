@@ -26,7 +26,7 @@ async function loadUnits(page = 1) {
 
     // Make API request
     const data = await apiRequest(`/units?${queryParams}`);
-
+    console.log(data);
     // Process response
     if (data.units && Array.isArray(data.units)) {
       units = data.units;
@@ -44,6 +44,7 @@ async function loadUnits(page = 1) {
       }
 
       // Display units and update pagination
+
       displayUnits();
       updatePagination();
 
