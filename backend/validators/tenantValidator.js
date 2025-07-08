@@ -42,6 +42,9 @@ const createTenantValidation = [
     .isLength({ min: 1, max: 20 })
     .withMessage("Assigned unit is required and must not exceed 20 characters"),
 
+  // ADD THIS - Missing unitId validation
+  body("unitId").isMongoId().withMessage("Please provide a valid unit ID"),
+
   body("address.street")
     .optional()
     .trim()
@@ -117,7 +120,6 @@ const createTenantValidation = [
 
   handleValidationErrors,
 ];
-
 // Validation rules for updating a tenant
 const updateTenantValidation = [
   param("id").isMongoId().withMessage("Please provide a valid tenant ID"),

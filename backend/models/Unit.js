@@ -162,12 +162,13 @@ unitSchema.index({ property: 1, status: 1 });
 unitSchema.index({ type: 1, rent: 1 });
 unitSchema.index({ created_by: 1 });
 
-// Virtual to get current tenant
+// Virtual to get current tenant - UPDATED to use unitId reference
 unitSchema.virtual("current_tenant", {
   ref: "Tenant",
   localField: "_id",
-  foreignField: "assignedUnit",
+  foreignField: "unitId", // Changed from "assignedUnit" to "unitId"
   justOne: true,
+  match: { status: "Active" }, // Only get active tenants
 });
 
 // Virtual to calculate total monthly cost
@@ -204,7 +205,7 @@ unitSchema.statics.getUnitsByProperty = function (propertyId) {
     is_active: true,
   })
     .populate("property", "name address type")
-    .populate("current_tenant", "name email phone status");
+    .populate("current_tenant", "fullName email phoneNumber status");
 };
 
 // Instance method to check if unit is available for rent

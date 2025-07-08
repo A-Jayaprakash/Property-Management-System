@@ -1,24 +1,29 @@
-// Update unit status with debugging
+// Update unit status with improved validation
 async function updateUnitStatus(unitId, status) {
   try {
+    // Validate unitId
+    if (!unitId) {
+      throw new Error("Unit ID is required");
+    }
+
     const url = `http://localhost:3000/api/units/${unitId}/status`;
     const headers = {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     };
 
-    console.log("Making PATCH request to:", url);
-    console.log("Headers:", headers);
-    console.log("Body:", JSON.stringify({ status }));
+    console.log("Updating unit status:");
+    console.log("Unit ID:", unitId);
+    console.log("Status:", status);
+    console.log("URL:", url);
 
     const response = await fetch(url, {
       method: "PATCH",
       headers: headers,
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status: status.toLowerCase() }),
     });
 
     console.log("Response status:", response.status);
-    console.log("Response headers:", response.headers);
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);

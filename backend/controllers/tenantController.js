@@ -5,6 +5,14 @@ const mongoose = require("mongoose");
 const createTenant = async (req, res) => {
   try {
     // Check if email already exists
+    console.log("Incoming Tenant Data:", req.body);
+    if (!req.body.unitId) {
+      return res.status(400).json({
+        success: false,
+        message: "Unit ID is missing from request body",
+      });
+    }
+
     const existingTenant = await Tenant.findOne({ email: req.body.email });
     if (existingTenant) {
       return res.status(400).json({
@@ -13,11 +21,10 @@ const createTenant = async (req, res) => {
       });
     }
 
-    // Check if unit is already occupied
+    // Check if unit is already occupied using unitId
     const unitOccupied = await Tenant.findOne({
-      assignedUnit: req.body.assignedUnit,
+      unitId: req.body.unitId,
       status: "Active",
-      propertyId: req.body.propertyId,
     });
     if (unitOccupied) {
       return res.status(400).json({
@@ -27,6 +34,7 @@ const createTenant = async (req, res) => {
     }
 
     const tenant = new Tenant(req.body);
+
     await tenant.save();
 
     res.status(201).json({
@@ -52,6 +60,7 @@ const getAllTenants = async (req, res) => {
       limit = 10,
       status,
       assignedUnit,
+      unitId,
       propertyId,
       search,
       sortBy = "createdAt",
@@ -62,6 +71,7 @@ const getAllTenants = async (req, res) => {
     const filter = {};
     if (status) filter.status = status;
     if (assignedUnit) filter.assignedUnit = assignedUnit;
+    if (unitId) filter.unitId = unitId;
     if (propertyId) filter.propertyId = propertyId;
 
     // Add search functionality
@@ -81,12 +91,13 @@ const getAllTenants = async (req, res) => {
     // Calculate pagination
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
-    // Execute query
+    // Execute query with populated unitId
     const tenants = await Tenant.find(filter)
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit))
-      .populate("propertyId", "name address");
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
 
     // Get total count for pagination
     const totalCount = await Tenant.countDocuments(filter);
@@ -117,10 +128,9 @@ const getAllTenants = async (req, res) => {
 // Get a single tenant by ID
 const getTenantById = async (req, res) => {
   try {
-    const tenant = await Tenant.findById(req.params.id).populate(
-      "propertyId",
-      "name address"
-    );
+    const tenant = await Tenant.findById(req.params.id)
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
 
     if (!tenant) {
       return res.status(404).json({
@@ -161,16 +171,15 @@ const updateTenant = async (req, res) => {
     }
 
     // Check if trying to move to an occupied unit
-    if (req.body.assignedUnit) {
+    if (req.body.unitId) {
       const currentTenant = await Tenant.findById(req.params.id);
       if (
         currentTenant &&
-        currentTenant.assignedUnit !== req.body.assignedUnit
+        currentTenant.unitId.toString() !== req.body.unitId
       ) {
         const unitOccupied = await Tenant.findOne({
-          assignedUnit: req.body.assignedUnit,
+          unitId: req.body.unitId,
           status: "Active",
-          propertyId: req.body.propertyId || currentTenant.propertyId,
           _id: { $ne: req.params.id },
         });
         if (unitOccupied) {
@@ -185,7 +194,9 @@ const updateTenant = async (req, res) => {
     const tenant = await Tenant.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
-    }).populate("propertyId", "name address");
+    })
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
 
     if (!tenant) {
       return res.status(404).json({
@@ -238,7 +249,7 @@ const deleteTenant = async (req, res) => {
 // Relocate tenant to a different unit
 const relocateTenant = async (req, res) => {
   try {
-    const { newUnit, effectiveDate } = req.body;
+    const { newUnitId, newUnit, effectiveDate } = req.body;
 
     const tenant = await Tenant.findById(req.params.id);
     if (!tenant) {
@@ -248,11 +259,10 @@ const relocateTenant = async (req, res) => {
       });
     }
 
-    // Check if new unit is available
+    // Check if new unit is available using unitId
     const unitOccupied = await Tenant.findOne({
-      assignedUnit: newUnit,
+      unitId: newUnitId,
       status: "Active",
-      propertyId: tenant.propertyId,
       _id: { $ne: req.params.id },
     });
     if (unitOccupied) {
@@ -263,6 +273,7 @@ const relocateTenant = async (req, res) => {
     }
 
     // Update tenant with new unit
+    tenant.unitId = newUnitId;
     tenant.assignedUnit = newUnit;
     if (effectiveDate) {
       tenant.notes = `${tenant.notes || ""} Relocated from ${
@@ -289,7 +300,30 @@ const relocateTenant = async (req, res) => {
   }
 };
 
-// Get tenants by unit
+// Get tenants by unit ID
+const getTenantsByUnitId = async (req, res) => {
+  try {
+    const { unitId } = req.params;
+
+    const tenants = await Tenant.find({ unitId })
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
+
+    res.status(200).json({
+      success: true,
+      data: tenants,
+    });
+  } catch (error) {
+    console.error("Error fetching tenants by unit ID:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch tenants by unit ID",
+      error: error.message,
+    });
+  }
+};
+
+// Get tenants by unit number (keeping for backward compatibility)
 const getTenantsByUnit = async (req, res) => {
   try {
     const { unit } = req.params;
@@ -298,10 +332,9 @@ const getTenantsByUnit = async (req, res) => {
     const filter = { assignedUnit: unit };
     if (propertyId) filter.propertyId = propertyId;
 
-    const tenants = await Tenant.find(filter).populate(
-      "propertyId",
-      "name address"
-    );
+    const tenants = await Tenant.find(filter)
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
 
     res.status(200).json({
       success: true,
@@ -322,9 +355,9 @@ const getExpiringLeases = async (req, res) => {
   try {
     const { daysAhead = 30 } = req.query;
 
-    const expiringLeases = await Tenant.findExpiringLeases(
-      parseInt(daysAhead)
-    ).populate("propertyId", "name address");
+    const expiringLeases = await Tenant.findExpiringLeases(parseInt(daysAhead))
+      .populate("propertyId", "name address")
+      .populate("unitId", "unit_number type rent area floor");
 
     res.status(200).json({
       success: true,
@@ -417,6 +450,7 @@ module.exports = {
   deleteTenant,
   relocateTenant,
   getTenantsByUnit,
+  getTenantsByUnitId, // New method for unit ID
   getExpiringLeases,
   getTenantStats,
   extendLease,

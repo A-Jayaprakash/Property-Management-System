@@ -38,6 +38,13 @@ const tenantSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // ADD THIS FIELD - Reference to the Unit document
+    unitId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Unit",
+      required: [true, "Unit ID is required"],
+    },
+
     address: {
       street: {
         type: String,
@@ -142,9 +149,14 @@ tenantSchema.pre("save", function (next) {
   next();
 });
 
-// Static method to find tenants by unit
-tenantSchema.statics.findByUnit = function (unit) {
-  return this.find({ assignedUnit: unit });
+// Static method to find tenants by unit (updated to use unitId)
+tenantSchema.statics.findByUnit = function (unitId) {
+  return this.find({ unitId: unitId });
+};
+
+// Static method to find tenants by unit number (keeping for backward compatibility)
+tenantSchema.statics.findByUnitNumber = function (unitNumber) {
+  return this.find({ assignedUnit: unitNumber });
 };
 
 // Static method to find expiring leases
