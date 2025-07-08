@@ -58,7 +58,6 @@ async function handleFormSubmit() {
     }
 
     console.log("Form submit response status:", response.status);
-
     if (!response.ok) {
       // Handle authentication errors
       if (response.status === 401) {
@@ -80,14 +79,14 @@ async function handleFormSubmit() {
     const result = await response.json();
     console.log("Property saved successfully:", result);
 
-    closeModal();
     await loadProperties(); // Reload properties after successful save
+
     showSuccess(
       currentEditId
         ? "Property updated successfully!"
         : "Property created successfully!"
     );
-
+    closeModal();
     // Reset form state
     currentEditId = null;
   } catch (error) {

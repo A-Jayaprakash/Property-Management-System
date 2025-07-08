@@ -27,6 +27,7 @@ document
     );
 
     try {
+      console.log("UNIT ID BEFORE FETCH CALL:", editingUnitId);
       const url = editingUnitId
         ? `${API_BASE_URL}/units/${editingUnitId}`
         : `${API_BASE_URL}/units`;
@@ -43,14 +44,14 @@ document
       });
 
       if (response.ok) {
-        closeModal();
         loadUnits(currentPage);
         loadStats();
-        alert(
+        showSuccess(
           editingUnitId
             ? "Unit updated successfully!"
             : "Unit created successfully!"
         );
+        closeModal();
       } else {
         const error = await response.json();
         alert(`Error: ${error.message}`);

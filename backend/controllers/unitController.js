@@ -344,7 +344,7 @@ const getAvailableUnits = async (req, res) => {
 // Update unit status
 const updateUnitStatus = async (req, res) => {
   try {
-    const { id } = req.params; // this is actually unit_number like "A-100"
+    const { id } = req.params; // unit ID
     const { status, reason } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -360,22 +360,23 @@ const updateUnitStatus = async (req, res) => {
       return res.status(404).json({ message: "Unit not found" });
     }
 
-    if (!unit) {
-      return res.status(404).json({ message: "Unit not found" });
+    // Check for conflicting tenant before setting status
+    const activeTenant = await Tenant.findOne({
+      unitId: unit._id,
+      status: "Active",
+    });
+
+    if (unit.status === "occupied" && status === "available" && activeTenant) {
+      return res.status(400).json({
+        message:
+          "Cannot mark unit as available while an active tenant is still occupying it.",
+      });
     }
 
-    // Additional check if marking as occupied
-    if (status === "occupied") {
-      const activeTenant = await Tenant.findOne({
-        assignedUnit: unit.unit_number,
-        status: "Active",
+    if (status === "occupied" && !activeTenant) {
+      return res.status(400).json({
+        message: "Cannot mark unit as occupied without an active tenant.",
       });
-
-      if (!activeTenant) {
-        return res.status(400).json({
-          message: "Cannot mark unit as occupied without an active tenant",
-        });
-      }
     }
 
     // Update status

@@ -339,9 +339,11 @@ function renderProperties(properties) {
                 : ""
             }
             <div class="property-description">
-              Property with ${property.totalUnits} units. ${
-        availableUnits.length
-      } units currently available for rent.
+              Property with ${property.totalUnits} Units. 
+              </div>
+              <div class="property-description">${
+                availableUnits.length
+              } Units currently available for rent.
             </div>
             
             ${

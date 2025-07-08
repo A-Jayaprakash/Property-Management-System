@@ -2,7 +2,7 @@
 function editUnit(unitId) {
   const unit = units.find((u) => u._id === unitId);
   if (!unit) return;
-
+  console.log("UNIT ID:", unitId);
   editingUnitId = unitId;
   document.getElementById("modalTitle").textContent = "Edit Unit";
 
