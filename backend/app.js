@@ -28,6 +28,7 @@ app.use(
       "http://localhost:5500",
       "http://127.0.0.1:3000",
       "http://localhost:8080",
+      "https://property-management-system-1-zblf.onrender.com",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
