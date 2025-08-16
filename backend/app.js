@@ -19,7 +19,6 @@ const authRoutes = require("./routes/authRoutes");
 const app = express();
 
 app.use(express.json());
-
 app.use(
   cors({
     origin: [
@@ -49,17 +48,17 @@ const connectDB = async () => {
       console.error("MONGO_URI not defined in .env");
       process.exit(1);
     }
-
     await mongoose.connect(process.env.MONGO_URI, {});
-
     console.log("Connected to MongoDB");
   } catch (error) {
     console.error("MongoDB connection failed:", error.message);
     process.exit(1);
   }
 };
+
 connectDB();
 
+/*
 app.get("/", (req, res) => {
   res.json({
     message: "Property Management System API is running...",
@@ -72,8 +71,9 @@ app.get("/", (req, res) => {
     },
   });
 });
+*/
 
-// Debug route to test server
+// Debug route to test server (keep this for testing)
 app.get("/debug", (req, res) => {
   res.json({
     message: "Debug endpoint working",
