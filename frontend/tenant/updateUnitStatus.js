@@ -6,7 +6,7 @@ async function updateUnitStatus(unitId, status) {
       throw new Error("Unit ID is required");
     }
 
-    const url = `http://localhost:3000/api/units/${unitId}/status`;
+    const url = `${API_BASE_URL}/api/units/${unitId}/status`;
     const headers = {
       "Content-Type": "application/json",
       ...getAuthHeaders(),

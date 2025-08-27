@@ -1,6 +1,6 @@
 async function loadProperties() {
   try {
-    const response = await fetch("http://localhost:3000/api/properties", {
+    const response = await fetch(`${API_BASE_URL}/api/properties`, {
       headers: getAuthHeaders(),
     });
 

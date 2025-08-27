@@ -48,13 +48,13 @@ async function saveTenant(e) {
     let response;
     if (editingTenant) {
       const tenantId = editingTenant._id || editingTenant.id;
-      response = await fetch(`http://localhost:3000/api/tenants/${tenantId}`, {
+      response = await fetch(`${API_BASE_URL}/api/tenants/${tenantId}`, {
         method: "PUT",
         headers: getAuthHeaders(),
         body: JSON.stringify(tenantData),
       });
     } else {
-      response = await fetch("http://localhost:3000/api/tenants", {
+      response = await fetch(`${API_BASE_URL}/api/tenants`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -10,7 +10,7 @@ async function loadUnitsForProperty() {
 
   try {
     const response = await fetch(
-      `http://localhost:3000/api/units?propertyId=${propertyId}&status=available`,
+      `${API_BASE_URL}/api/units?propertyId=${propertyId}&status=available`,
       {
         method: "GET",
         headers: getAuthHeaders(),

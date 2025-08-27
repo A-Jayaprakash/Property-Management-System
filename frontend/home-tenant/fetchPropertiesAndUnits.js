@@ -23,10 +23,10 @@ async function fetchPropertiesAndUnits(forceRefresh = false) {
 
     // Add timestamp to prevent caching (this is sufficient for cache busting)
     const timestamp = forceRefresh ? new Date().getTime() : Date.now();
-    const propertiesUrl = `http://localhost:3000/api/properties?t=${timestamp}${
+    const propertiesUrl = `${API_BASE_URL}/api/properties?t=${timestamp}${
       forceRefresh ? "&refresh=true" : ""
     }`;
-    const unitsUrl = `http://localhost:3000/api/units?t=${timestamp}${
+    const unitsUrl = `${API_BASE_URL}/api/units?t=${timestamp}${
       forceRefresh ? "&refresh=true" : ""
     }`;
 

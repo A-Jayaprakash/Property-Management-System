@@ -5,7 +5,7 @@ async function loadTenants() {
     document.getElementById("emptyState").style.display = "none";
 
     const response = await fetch(
-      `http://localhost:3000/api/tenants?managerId=${managerId}`,
+      `${API_BASE_URL}/api/tenants?managerId=${managerId}`,
       {
         method: "GET",
         headers: getAuthHeaders(),

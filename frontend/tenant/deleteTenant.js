@@ -19,13 +19,10 @@ async function deleteTenant(tenantId) {
     console.log("Tenant found:", tenant);
     console.log("Tenant unitId:", tenant.unitId);
 
-    const response = await fetch(
-      `http://localhost:3000/api/tenants/${tenantId}`,
-      {
-        method: "DELETE",
-        headers: getAuthHeaders(),
-      }
-    );
+    const response = await fetch(`${API_BASE_URL}/api/tenants/${tenantId}`, {
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to delete tenant");

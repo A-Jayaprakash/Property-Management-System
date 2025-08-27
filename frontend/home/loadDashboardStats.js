@@ -5,13 +5,10 @@ async function loadDashboardStats() {
     showLoading();
 
     // Load properties
-    const propertiesResponse = await fetch(
-      "http://localhost:3000/api/properties",
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    const unitsResponse = await fetch("http://localhost:3000/api/units", {
+    const propertiesResponse = await fetch(`${API_BASE_URL}/api/properties`, {
+      headers: getAuthHeaders(),
+    });
+    const unitsResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
       headers: getAuthHeaders(),
     });
 
@@ -40,7 +37,7 @@ async function loadDashboardStats() {
     }
 
     // Load tenants
-    const tenantsResponse = await fetch("http://localhost:3000/api/tenants", {
+    const tenantsResponse = await fetch(`${API_BASE_URL}/api/tenants`, {
       headers: getAuthHeaders(),
     });
 
