@@ -75,6 +75,7 @@ const connectDB = async () => {
 connectDB();
 
 // Health endpoint (useful for Render health checks)
+/*
 app.get("/", (_req, res) => {
   res.json({
     status: "OK",
@@ -82,7 +83,7 @@ app.get("/", (_req, res) => {
     time: new Date().toISOString(),
   });
 });
-
+*/
 // Debug route to test server
 app.get("/debug", (_req, res) => {
   res.json({
