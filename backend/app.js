@@ -109,7 +109,7 @@ app.use("/api/units", verifyToken, unitRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
 // Serve static files from frontend
-const frontendPath = path.resolve(__dirname, "../frontend");
+const frontendPath = path.resolve(process.cwd(), "frontend");
 console.log("Frontend path:", frontendPath); // Debug log
 app.use(express.static(frontendPath));
 
