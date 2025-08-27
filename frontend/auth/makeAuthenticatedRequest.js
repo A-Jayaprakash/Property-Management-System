@@ -1,7 +1,9 @@
-async function makeAuthenticatedRequest(url, options = {}) {
+async function makeAuthenticatedRequest(endpoint, options = {}) {
   if (!isAuthenticated) {
     throw new Error("Not authenticated");
   }
+
+  const url = `${API_BASE_URL}${endpoint}`; // Build full URL
 
   const defaultOptions = {
     headers: getAuthHeaders(),
@@ -20,7 +22,6 @@ async function makeAuthenticatedRequest(url, options = {}) {
 
   if (!response.ok) {
     if (response.status === 401) {
-      // Token expired or invalid
       logout();
       throw new Error("Authentication expired. Please login again.");
     }

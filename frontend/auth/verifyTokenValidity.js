@@ -5,7 +5,8 @@ async function verifyTokenValidity() {
   }
 
   try {
-    const response = await fetch(API_BASE_URL, {
+    const response = await fetch(`${API_BASE_URL}/api/auth/verify`, {
+      // Fixed URL
       method: "GET",
       headers: getAuthHeaders(),
     });
@@ -18,7 +19,6 @@ async function verifyTokenValidity() {
     return true;
   } catch (error) {
     console.error("Token verification failed:", error);
-    // Clear invalid token and redirect to login
     sessionStorage.removeItem("authToken");
     sessionStorage.removeItem("userData");
     window.location.href = "login.html";
