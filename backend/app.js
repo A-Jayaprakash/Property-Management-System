@@ -26,9 +26,7 @@ const allowedOrigins = [
   "http://localhost:5500",
   "http://127.0.0.1:3000",
   "http://localhost:8080",
-  // Add your deployed frontend origin(s) here, e.g.:
-  // "https://your-frontend.onrender.com",
-  // "https://your-frontend-domain.com",
+  "https://property-management-system-2.onrender.com",
 ];
 
 app.use(
@@ -110,15 +108,21 @@ app.use("/api/tenants", verifyToken, tenantRoutes);
 app.use("/api/units", verifyToken, unitRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
-const frontendPath = path.join(__dirname, "../frontend");
+// Serve static files from frontend
+const frontendPath = path.resolve(__dirname, "../frontend");
+console.log("Frontend path:", frontendPath); // Debug log
 app.use(express.static(frontendPath));
 
-// Serve frontend for any non-API routes if frontend exists
+// Serve index.html for any non-API routes
 app.get(/^\/(?!api).*/, (req, res, next) => {
   const indexPath = path.join(frontendPath, "index.html");
-  // Only try to serve if index exists; otherwise pass to 404 or next handler
+  console.log("Trying to serve:", indexPath); // Debug log
+
   res.sendFile(indexPath, (err) => {
-    if (err) next(); // fall through to next handler if file not found
+    if (err) {
+      console.log("Error serving index.html:", err.message);
+      next(); // fall through to next handler if file not found
+    }
   });
 });
 
