@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Login - Property Management System</title>
     <link rel="stylesheet" href="styles/login.css" />
+    <script src="auth/config.js"></script>
   </head>
   <body>
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -47,7 +48,6 @@
         <p>Don't have an account? <a href="register.html">Sign up here</a></p>
       </div>
     </div>
-    <script src="auth/config.js"></script>
     <script>
       // Theme functionality
       function toggleTheme() {
@@ -105,7 +105,7 @@
         try {
           console.log("Attempting login for user:", username);
 
-          const response = await fetch("http://localhost:3000/api/auth/login", {
+          const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

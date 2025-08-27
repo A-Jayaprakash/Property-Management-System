@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Register - Property Management System</title>
     <link rel="stylesheet" href="styles/register.css" />
+    <script src="auth/config.js"></script>
   </head>
   <body>
     <button class="theme-toggle" onclick="toggleTheme()">🌙</button>
@@ -248,7 +249,7 @@
         registerBtn.textContent = "Creating Account...";
 
         try {
-          const res = await fetch("http://localhost:3000/api/auth/register", {
+          const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -294,6 +295,5 @@
     <script src="property/toggleTheme.js"></script>
     <script src="auth/showMessage.js"></script>
     <script src="auth/passwordValidation.js"></script>
-    <script src="auth/config.js"></script>
   </body>
 </html>
