@@ -23,8 +23,8 @@ const createTenantValidation = [
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage("Full name must be between 2 and 100 characters")
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage("Full name can only contain letters and spaces"),
+    .matches(/^[a-zA-Z0-9\s.\-']+$/)
+    .withMessage("Full name can only contain letters, numbers, spaces, dots, hyphens, and apostrophes"),
 
   body("email")
     .trim()
@@ -129,8 +129,8 @@ const updateTenantValidation = [
     .trim()
     .isLength({ min: 2, max: 100 })
     .withMessage("Full name must be between 2 and 100 characters")
-    .matches(/^[a-zA-Z\s]+$/)
-    .withMessage("Full name can only contain letters and spaces"),
+    .matches(/^[a-zA-Z0-9\s.\-']+$/)
+    .withMessage("Full name can only contain letters, numbers, spaces, dots, hyphens, and apostrophes"),
 
   body("email")
     .optional()

@@ -21,7 +21,7 @@ function openModal(mode, tenantId = null) {
       .split("T")[0];
   } else if (mode === "editTenant") {
     modalTitle.textContent = "Edit Tenant";
-    const tenant = tenants.find((t) => t.id === tenantId);
+    const tenant = tenants.find((t) => (t._id || t.id) === tenantId);
     if (tenant) {
       populateForm(tenant);
       editingTenant = tenant;

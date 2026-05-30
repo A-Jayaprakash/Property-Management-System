@@ -31,11 +31,14 @@ async function populateForm(tenant) {
 
   // Set property and unit
   if (tenant.propertyId) {
-    document.getElementById("propertySelect").value = tenant.propertyId;
+    // propertyId may be a populated object or a plain string ID
+    const propertyIdValue =
+      tenant.propertyId?._id || tenant.propertyId;
+    document.getElementById("propertySelect").value = propertyIdValue;
 
-    // Load units for the property and then set the assigned unit
+    // Load units for the property (editing mode — include occupied units)
     try {
-      await loadUnitsForProperty();
+      await loadUnitsForProperty(true);
 
       // Set the assigned unit after units are loaded
       if (tenant.assignedUnit) {

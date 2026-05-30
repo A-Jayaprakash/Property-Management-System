@@ -11,6 +11,6 @@ function updateStatsDisplay(stats) {
     stats.occupancy_rate || 0
   }%`;
   document.getElementById("avgRent").textContent = `₹${(
-    stats.avg_rent || 0
+    stats.avg_rent ?? stats.average_rent ?? 0
   ).toLocaleString()}`;
 }

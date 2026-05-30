@@ -23,7 +23,7 @@ async function updateUnitStatus(unitId, currentStatus) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/units/${unitId}/status`, {
+    const response = await fetch(`${API_BASE_URL}/api/units/${unitId}/status`, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",

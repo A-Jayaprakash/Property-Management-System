@@ -1,4 +1,5 @@
-async function loadUnitsForProperty() {
+// editMode = true when editing an existing tenant (show all units, not just available)
+async function loadUnitsForProperty(editMode = false) {
   const propertyId = document.getElementById("propertySelect").value;
   const unitSelect = document.getElementById("assignedUnit");
 
@@ -9,13 +10,15 @@ async function loadUnitsForProperty() {
   }
 
   try {
-    const response = await fetch(
-      `${API_BASE_URL}/api/units?propertyId=${propertyId}&status=available`,
-      {
-        method: "GET",
-        headers: getAuthHeaders(),
-      }
-    );
+    // In edit mode include occupied units so the current assignment stays visible
+    const url = editMode
+      ? `${API_BASE_URL}/api/units?property=${propertyId}`
+      : `${API_BASE_URL}/api/units?property=${propertyId}&status=available`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: getAuthHeaders(),
+    });
 
     if (!response.ok) {
       throw new Error("Failed to load units");
@@ -24,15 +27,14 @@ async function loadUnitsForProperty() {
     const data = await response.json();
     console.log("API units response:", data);
 
-    const availableUnits = Array.isArray(data) ? data : data.units || [];
+    const unitList = Array.isArray(data) ? data : data.units || [];
 
-    availableUnits.forEach((unit) => {
+    unitList.forEach((unit) => {
       const option = document.createElement("option");
-      // Change this line: use unit_number instead of unit ID
       option.value = unit.unit_number;
-      option.textContent = `${unit.unit_number} - ${unit.type} (${unit.area}sqft)`;
+      option.textContent = `${unit.unit_number} - ${unit.type} (${unit.area} sqft)${unit.status !== "available" ? ` [${unit.status}]` : ""}`;
       option.dataset.rent = unit.rent;
-      option.dataset.unitId = unit.id || unit._id; // Store the actual unit ID as data attribute
+      option.dataset.unitId = unit._id || unit.id;
       unitSelect.appendChild(option);
     });
 

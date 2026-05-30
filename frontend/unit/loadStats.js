@@ -3,7 +3,7 @@ async function loadStats() {
   try {
     console.log("Loading unit statistics from database...");
 
-    const data = await apiRequest("/units/stats");
+    const data = await apiRequest("/api/units/stats");
     console.log("THIS IS THE UNIT STATS!!!!!", data);
 
     if (data) {

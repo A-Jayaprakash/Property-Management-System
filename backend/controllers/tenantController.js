@@ -273,12 +273,11 @@ const relocateTenant = async (req, res) => {
     }
 
     // Update tenant with new unit
+    const oldUnit = tenant.assignedUnit;
     tenant.unitId = newUnitId;
     tenant.assignedUnit = newUnit;
     if (effectiveDate) {
-      tenant.notes = `${tenant.notes || ""} Relocated from ${
-        tenant.assignedUnit
-      } to ${newUnit} on ${new Date(
+      tenant.notes = `${tenant.notes || ""} Relocated from ${oldUnit} to ${newUnit} on ${new Date(
         effectiveDate
       ).toLocaleDateString()}`.trim();
     }
@@ -378,7 +377,9 @@ const getExpiringLeases = async (req, res) => {
 const getTenantStats = async (req, res) => {
   try {
     const { propertyId } = req.query;
-    const filter = propertyId ? { propertyId } : {};
+    const filter = propertyId
+      ? { propertyId: new mongoose.Types.ObjectId(propertyId) }
+      : {};
 
     const stats = await Tenant.aggregate([
       { $match: filter },
