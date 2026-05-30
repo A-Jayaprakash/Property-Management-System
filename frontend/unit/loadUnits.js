@@ -25,7 +25,7 @@ async function loadUnits(page = 1) {
     });
 
     // Make API request
-    const data = await apiRequest(`/units?${queryParams}`);
+    const data = await apiRequest(`/api/units?${queryParams}`);
     console.log(data);
     // Process response
     if (data.units && Array.isArray(data.units)) {

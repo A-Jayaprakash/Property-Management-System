@@ -58,7 +58,7 @@ function displayUnits() {
                             ? `
                             <div class="unit-detail-row">
                                 <span class="unit-detail-label">Tenant:</span>
-                                <span class="unit-detail-value">${unit.current_tenant.name}</span>
+                                <span class="unit-detail-value">${unit.current_tenant.fullName}</span>
                             </div>
                         `
                             : ""

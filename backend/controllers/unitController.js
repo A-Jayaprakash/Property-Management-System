@@ -256,8 +256,8 @@ const deleteUnit = async (req, res) => {
 
     // Check if unit has active tenants
     const activeTenant = await Tenant.findOne({
-      assignedUnit: id,
-      status: "active",
+      unitId: unit._id,
+      status: "Active",
     });
 
     if (activeTenant) {

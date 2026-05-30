@@ -29,8 +29,8 @@ document
     try {
       console.log("UNIT ID BEFORE FETCH CALL:", editingUnitId);
       const url = editingUnitId
-        ? `${API_BASE_URL}/units/${editingUnitId}`
-        : `${API_BASE_URL}/units`;
+        ? `${API_BASE_URL}/api/units/${editingUnitId}`
+        : `${API_BASE_URL}/api/units`;
 
       const method = editingUnitId ? "PUT" : "POST";
 

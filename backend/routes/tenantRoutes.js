@@ -8,6 +8,7 @@ const {
   deleteTenant,
   relocateTenant,
   getTenantsByUnit,
+  getTenantsByUnitId,
   getExpiringLeases,
   getTenantStats,
   extendLease,
@@ -42,9 +43,14 @@ router.get("/stats", getTenantStats);
 router.get("/expiring-leases", getExpiringLeases);
 
 // @route   GET /api/tenants/unit/:unit
-// @desc    Get tenants by unit
+// @desc    Get tenants by unit number (string)
 // @access  Private
 router.get("/unit/:unit", getTenantsByUnit);
+
+// @route   GET /api/tenants/unit-id/:unitId
+// @desc    Get tenants by unit ObjectId reference
+// @access  Private
+router.get("/unit-id/:unitId", getTenantsByUnitId);
 
 // @route   GET /api/tenants/:id
 // @desc    Get a single tenant by ID

@@ -2,10 +2,10 @@
 async function loadProperties() {
   try {
     console.log("🔍 Loading properties from database...");
-    console.log("📡 API URL:", `${API_BASE_URL}/properties`);
+    console.log("📡 API URL:", `${API_BASE_URL}/api/properties`);
     console.log("🔑 Token:", token ? "Present" : "Missing");
 
-    const data = await apiRequest("/properties");
+    const data = await apiRequest("/api/properties");
     
     console.log("📥 Raw API Response:", data);
     console.log("📊 Response Type:", typeof data);
