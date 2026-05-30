@@ -8,15 +8,16 @@ async function loadDashboardStats() {
     const propertiesResponse = await fetch(`${API_BASE_URL}/api/properties`, {
       headers: getAuthHeaders(),
     });
-    const unitsResponse = await fetch(`${API_BASE_URL}/api/auth/login`, {
-      headers: getAuthHeaders(),
-    });
+    const unitsResponse = await fetch(
+      `${API_BASE_URL}/api/units/stats`,
+      { headers: getAuthHeaders() }
+    );
 
     if (propertiesResponse.ok) {
       const properties = await propertiesResponse.json();
       dashboardData.properties = properties.length;
 
-      // Count total units
+      // Count total units from property unitCount fields as fallback
       dashboardData.units = properties.reduce((total, property) => {
         if (Array.isArray(property.units)) {
           return total + property.units.length;
@@ -30,10 +31,7 @@ async function loadDashboardStats() {
 
     if (unitsResponse.ok) {
       const unitsData = await unitsResponse.json();
-      console.log(unitsData);
-      dashboardData.units = Array.isArray(unitsData.units)
-        ? unitsData.units.length
-        : 0;
+      dashboardData.units = unitsData.total_units ?? dashboardData.units;
     }
 
     // Load tenants
@@ -61,6 +59,6 @@ async function loadDashboardStats() {
   } catch (error) {
     console.error("Error loading dashboard stats:", error);
     hideLoading();
-    showError("Failed to load dashboard statistics");
+    console.error("Failed to load dashboard statistics");
   }
 }

@@ -2,7 +2,6 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const Tenant = require("../models/Tenant");
 const {
   generateToken,
   hashPassword,
@@ -41,7 +40,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.log("Login Error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({ message: "Login failed. Please try again." });
   }
 });
 
@@ -49,9 +48,17 @@ router.post("/register", async (req, res) => {
   try {
     console.log("POST /api/auth/register called");
     const { name, username, email, phone, password, role } = req.body;
-    const existingUser = await User.findOne({ username });
-    if (existingUser) {
-      return res.status(400).json({ message: "User Already Exists" });
+
+    // Check duplicate username
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(400).json({ message: "Username is already taken" });
+    }
+
+    // Check duplicate email
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "An account with this email already exists" });
     }
 
     const hashedPassword = await hashPassword(password, 10);
@@ -64,19 +71,24 @@ router.post("/register", async (req, res) => {
       role: role || "tenant",
     });
     await newUser.save();
-    if (role === "tenant") {
-      const newTenant = new Tenant({
-        name,
-        username,
-        email,
-        phone,
-      });
-      await newTenant.save();
-    }
-    return res.status(201).json({ message: "User Successfully Registered" });
+
+    return res.status(201).json({ message: "Account created successfully! Please log in." });
   } catch (error) {
     console.log("Registration Failed:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+
+    // Mongoose validation error — surface the first field-level message
+    if (error.name === "ValidationError") {
+      const firstMsg = Object.values(error.errors)[0]?.message;
+      return res.status(400).json({ message: firstMsg || "Validation failed" });
+    }
+
+    // MongoDB duplicate key (race condition after the manual checks above)
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(400).json({ message: `${field.charAt(0).toUpperCase() + field.slice(1)} is already in use` });
+    }
+
+    return res.status(500).json({ message: "Registration failed. Please try again." });
   }
 });
 

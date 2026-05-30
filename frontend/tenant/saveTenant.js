@@ -68,7 +68,12 @@ async function saveTenant(e) {
     if (!response.ok) {
       const errorData = await response.json().catch(() => null);
       console.error("Server response:", errorData);
-      throw new Error(errorData?.message || "Failed to save tenant");
+      // Surface the first field-level validation error if available
+      const fieldError =
+        Array.isArray(errorData?.errors) && errorData.errors.length > 0
+          ? `${errorData.errors[0].field}: ${errorData.errors[0].message}`
+          : null;
+      throw new Error(fieldError || errorData?.message || "Failed to save tenant");
     }
 
     const responseData = await response.json();

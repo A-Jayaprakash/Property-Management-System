@@ -9,7 +9,7 @@ async function deleteUnit(unitId) {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/units/${unitId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/units/${unitId}`, {
       method: "DELETE",
       headers: {
         Authorization: `Bearer ${token}`,
