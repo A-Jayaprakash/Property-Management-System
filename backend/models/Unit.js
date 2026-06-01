@@ -154,8 +154,11 @@ const unitSchema = new mongoose.Schema(
   }
 );
 
-// Compound index to ensure unique unit numbers within the same property
-unitSchema.index({ unit_number: 1, property: 1 }, { unique: true });
+// Unique unit numbers per property — partial so soft-deleted units don't block reuse
+unitSchema.index(
+  { unit_number: 1, property: 1 },
+  { unique: true, partialFilterExpression: { is_active: true } }
+);
 
 // Index for efficient queries
 unitSchema.index({ property: 1, status: 1 });
