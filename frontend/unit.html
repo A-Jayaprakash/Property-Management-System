@@ -134,9 +134,11 @@
             </div>
             <div class="form-group">
               <label for="property">Property *</label>
-              <select id="property" name="property" required>
+              <select id="property" name="property" required
+                onchange="checkPropertyCapacity(this.value)">
                 <option value="">Select Property</option>
               </select>
+              <small id="unitCapacityInfo" style="display:block;margin-top:4px;"></small>
             </div>
           </div>
 
@@ -317,6 +319,7 @@
       let editingUnitId = null;
     </script>
     <script src="unit/config.js"></script>
+    <script src="unit/checkPropertyCapacity.js"></script>
     <script src="unit/applyFilters.js"></script>
     <script src="unit/clearFilters.js"></script>
     <script src="unit/closeModal.js"></script>
