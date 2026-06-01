@@ -1,4 +1,3 @@
-// Delete tenant - FIXED VERSION
 async function deleteTenant(tenantId) {
   if (
     !confirm(
@@ -9,39 +8,51 @@ async function deleteTenant(tenantId) {
   }
 
   try {
-    // Find tenant using both possible ID formats
     const tenant = tenants.find((t) => (t._id || t.id) === tenantId);
+    if (!tenant) throw new Error("Tenant not found");
 
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
+    // Resolve the unitId regardless of whether it is populated or a plain string
+    const rawUnitId = tenant.unitId;
+    const unitId =
+      rawUnitId && typeof rawUnitId === "object"
+        ? rawUnitId._id || rawUnitId.id
+        : rawUnitId;
 
-    console.log("Tenant found:", tenant);
-    console.log("Tenant unitId:", tenant.unitId);
-
+    // Delete the tenant first
     const response = await fetch(`${API_BASE_URL}/api/tenants/${tenantId}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-      throw new Error("Failed to delete tenant");
+      const errData = await response.json().catch(() => null);
+      throw new Error(errData?.message || "Failed to delete tenant");
     }
 
-    // Update unit status to available - only if unitId exists and is valid
-    if (tenant.unitId) {
-      try {
-        await updateUnitStatus(tenant.unitId._id, "available");
-        console.log("Unit status updated to available");
-      } catch (unitError) {
-        console.warn("Failed to update unit status:", unitError.message);
-        // Continue with tenant deletion even if unit update fails
+    // Free the unit now that the tenant record is gone
+    if (unitId) {
+      const unitRes = await fetch(
+        `${API_BASE_URL}/api/units/${unitId}/status`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: "available" }),
+        }
+      );
+
+      if (!unitRes.ok) {
+        const unitErr = await unitRes.json().catch(() => null);
+        // Non-fatal — tenant is already deleted; warn the user
+        showNotification(
+          `Tenant deleted, but unit status could not be updated: ${
+            unitErr?.message || "unknown error"
+          }. Please update it manually from the Unit page.`,
+          "warning"
+        );
       }
-    } else {
-      console.warn("No unitId found for tenant, skipping unit status update");
     }
 
-    // Remove tenant from arrays using the same ID matching logic
+    // Update local state
     tenants = tenants.filter((t) => (t._id || t.id) !== tenantId);
     filteredTenants = filteredTenants.filter(
       (t) => (t._id || t.id) !== tenantId
@@ -49,9 +60,9 @@ async function deleteTenant(tenantId) {
 
     renderTenants();
     updateStats();
-    showNotification("Tenant removed successfully", "success");
+    showNotification("Tenant removed and unit marked as available", "success");
   } catch (error) {
     console.error("Error deleting tenant:", error);
-    showNotification("Failed to remove tenant", "error");
+    showNotification(error.message || "Failed to remove tenant", "error");
   }
 }
