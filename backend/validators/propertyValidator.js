@@ -29,7 +29,16 @@ const propertySchema = Joi.object({
     "number.max": "Unit count must not exceed 10000",
     "any.required": "Unit count is required",
   }),
-  createdBy: Joi.string().optional().allow(null), // Optional field for user reference
+  amenities: Joi.array()
+    .items(
+      Joi.string().valid(
+        "Elevator", "Gym", "Pool", "Garden", "Security",
+        "Parking", "Power Backup", "Intercom", "Water Supply"
+      )
+    )
+    .optional()
+    .default([]),
+  createdBy: Joi.string().optional().allow(null),
 });
 
 // Function to validate a property object against the defined schema

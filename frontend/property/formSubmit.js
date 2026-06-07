@@ -6,6 +6,7 @@ async function handleFormSubmit() {
     locality: formData.get("locality"),
     type: formData.get("type"),
     unitCount: parseInt(formData.get("unitCount")),
+    amenities: formData.getAll("amenities"),
   };
 
   // Validate form data

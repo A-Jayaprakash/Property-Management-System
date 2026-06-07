@@ -79,9 +79,9 @@ function renderTenants() {
               </button>
               <button class="action-btn btn-danger" onclick="deleteTenant('${
                 tenant._id || tenant.id
-              }')">
-                <i class="fas fa-trash"></i>
-                Remove
+              }')" ${tenant.status === "Inactive" ? 'disabled title="Already inactive"' : ''}>
+                <i class="fas fa-power-off"></i>
+                ${tenant.status === "Inactive" ? "Inactive" : "Deactivate"}
               </button>
             </div>
           </div>

@@ -413,6 +413,32 @@ const getTenantStats = async (req, res) => {
   }
 };
 
+// Deactivate a tenant (soft vacate — keeps profile for auditing)
+const deactivateTenant = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+      return res.status(404).json({ success: false, message: "Tenant not found" });
+    }
+
+    if (tenant.status === "Inactive") {
+      return res.status(400).json({ success: false, message: "Tenant is already inactive" });
+    }
+
+    tenant.status = "Inactive";
+    await tenant.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Tenant deactivated successfully. Profile retained for auditing.",
+      data: tenant,
+    });
+  } catch (error) {
+    console.error("Error deactivating tenant:", error);
+    res.status(500).json({ success: false, message: "Failed to deactivate tenant", error: error.message });
+  }
+};
+
 // Extend lease for a tenant
 const extendLease = async (req, res) => {
   try {
@@ -449,9 +475,10 @@ module.exports = {
   getTenantById,
   updateTenant,
   deleteTenant,
+  deactivateTenant,
   relocateTenant,
   getTenantsByUnit,
-  getTenantsByUnitId, // New method for unit ID
+  getTenantsByUnitId,
   getExpiringLeases,
   getTenantStats,
   extendLease,

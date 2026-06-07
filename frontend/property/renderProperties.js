@@ -73,6 +73,14 @@ function renderProperties(propertiesToRender) {
                     <div class="property-detail">
                         <strong>🏠 Units:</strong> ${property.unitCount}
                     </div>
+                    ${
+                      property.amenities && property.amenities.length > 0
+                        ? `<div class="property-detail">
+                            <strong>🏢 Amenities:</strong>
+                            <span style="color:#555;">${property.amenities.join(" · ")}</span>
+                           </div>`
+                        : ""
+                    }
                     <div class="property-detail">
                         <strong>📅 Created:</strong> ${new Date(
                           property.createdAt

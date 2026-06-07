@@ -27,5 +27,10 @@ function editProperty(id) {
   document.getElementById("propertyType").value = property.type;
   document.getElementById("unitCount").value = property.unitCount;
 
+  // Pre-check saved amenities
+  const amenityBoxes = document.querySelectorAll('input[name="amenities"]');
+  const saved = property.amenities || [];
+  amenityBoxes.forEach((cb) => { cb.checked = saved.includes(cb.value); });
+
   document.getElementById("propertyModal").style.display = "block";
 }
