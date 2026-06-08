@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amenity Management — PropertySync</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles/home.css" />
+    <style>
+      .amenity-section { margin-bottom: 2.5rem; }
+      .amenity-section h2 { font-size: 1.2rem; margin-bottom: 1rem; display:flex; align-items:center; gap:.5rem; }
+      .amenity-table { width: 100%; border-collapse: collapse; background: var(--card-bg, #fff); border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+      .amenity-table th, .amenity-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border, #eee); }
+      .amenity-table th { background: var(--primary, #667eea); color: #fff; font-weight: 600; }
+      .amenity-table tr:last-child td { border-bottom: none; }
+      .amenity-table tr:hover td { background: var(--hover-bg, #f9f9f9); }
+      .badge-active   { display:inline-block; padding:2px 10px; border-radius:20px; background:#d4edda; color:#155724; font-size:.8rem; font-weight:600; }
+      .badge-inactive { display:inline-block; padding:2px 10px; border-radius:20px; background:#f8d7da; color:#721c24; font-size:.8rem; font-weight:600; }
+      .add-form { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; margin-bottom:1.5rem; }
+      .add-form input, .add-form select { padding: 9px 12px; border: 1px solid var(--border, #ddd); border-radius: 8px; font-size:.95rem; }
+      .add-form input { flex: 1; min-width: 160px; }
+      .tbl-btn { padding: 5px 12px; border: none; border-radius: 6px; cursor: pointer; font-size: .85rem; font-weight: 600; }
+      .tbl-btn-warning  { background: #ffc107; color: #000; }
+      .tbl-btn-danger   { background: #dc3545; color: #fff; }
+      .tbl-btn-success  { background: #28a745; color: #fff; }
+      .tbl-btn:hover { opacity:.87; }
+      .notice { color:#888; font-size:.88rem; margin-top:.5rem; }
+      .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; }
+      .page-header h1 { font-size:1.5rem; margin:0; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <a href="home.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container">
+        <div class="page-header">
+          <h1><i class="fas fa-list-check"></i> Amenity Management</h1>
+          <span id="adminOnlyNotice" style="color:#c00;display:none;">
+            <i class="fas fa-lock"></i> Admin only — view mode
+          </span>
+        </div>
+
+        <!-- Admin: Add new amenity -->
+        <div id="addSection">
+          <div class="add-form">
+            <input type="text" id="newAmenityName" placeholder="Amenity name…" maxlength="60" />
+            <select id="newAmenityLevel">
+              <option value="property">Property level</option>
+              <option value="unit">Unit level</option>
+            </select>
+            <button class="btn btn-primary" onclick="addAmenity()">
+              <i class="fas fa-plus"></i> Add Amenity
+            </button>
+          </div>
+          <p class="notice">
+            <i class="fas fa-info-circle"></i>
+            <strong>Property-level</strong> amenities are shared by all units (e.g. Gym, Elevator).
+            <strong>Unit-level</strong> amenities are per-unit (e.g. AC, Balcony).
+          </p>
+        </div>
+
+        <!-- Property-level amenities -->
+        <div class="amenity-section">
+          <h2><i class="fas fa-building" style="color:#667eea"></i> Property-Level Amenities</h2>
+          <table class="amenity-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="propertyAmenityRows">
+              <tr><td colspan="3" style="color:#aaa;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Unit-level amenities -->
+        <div class="amenity-section">
+          <h2><i class="fas fa-home" style="color:#28a745"></i> Unit-Level Amenities</h2>
+          <table class="amenity-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="unitAmenityRows">
+              <tr><td colspan="3" style="color:#aaa;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p id="notification" style="display:none;padding:12px 16px;border-radius:8px;font-weight:600;margin-top:1rem;"></p>
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      const token = sessionStorage.getItem("authToken");
+      let userData = null;
+      let isAdmin = false;
+
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        window.location.href = "login.html";
+      }
+
+      function authHeaders() {
+        return {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      function showMsg(msg, type = "success") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "warning" ? "#fff3cd" : "#f8d7da";
+        el.style.color     = type === "success" ? "#155724" : type === "warning" ? "#856404" : "#721c24";
+        setTimeout(() => { el.style.display = "none"; }, 4000);
+      }
+
+      async function loadAllAmenities() {
+        try {
+          const base = API_BASE_URL.replace(/\/$/, "");
+          const res = await fetch(`${base}/api/amenities?all=true`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          const all = data.data || [];
+          renderRows("propertyAmenityRows", all.filter(a => a.level === "property"));
+          renderRows("unitAmenityRows",     all.filter(a => a.level === "unit"));
+        } catch (err) {
+          console.error("loadAllAmenities:", err);
+          showMsg("Failed to load amenities: " + err.message, "error");
+        }
+      }
+
+      function renderRows(tbodyId, amenities) {
+        const tbody = document.getElementById(tbodyId);
+        if (amenities.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="3" style="color:#aaa;">None added yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = amenities.map(a => `
+          <tr id="row_${a._id}">
+            <td>
+              <span id="name_${a._id}">${a.name}</span>
+              <input id="edit_${a._id}" value="${a.name}" style="display:none;padding:5px 8px;border:1px solid #ddd;border-radius:6px;" />
+            </td>
+            <td>
+              <span class="${a.isActive ? 'badge-active' : 'badge-inactive'}">
+                ${a.isActive ? "Active" : "Inactive"}
+              </span>
+            </td>
+            <td style="display:flex;gap:6px;flex-wrap:wrap;">
+              ${isAdmin ? `
+              <button class="tbl-btn tbl-btn-warning" id="editBtn_${a._id}" onclick="startEdit('${a._id}')">
+                <i class="fas fa-pen"></i> Rename
+              </button>
+              <button class="tbl-btn tbl-btn-success" id="saveBtn_${a._id}" style="display:none" onclick="saveEdit('${a._id}')">
+                <i class="fas fa-check"></i> Save
+              </button>
+              <button class="tbl-btn" style="background:#6c757d;color:#fff;${a.isActive ? '' : 'display:none'}" onclick="toggleAmenity('${a._id}', false)">
+                <i class="fas fa-eye-slash"></i> Disable
+              </button>
+              <button class="tbl-btn tbl-btn-success" style="${a.isActive ? 'display:none' : ''}" onclick="toggleAmenity('${a._id}', true)">
+                <i class="fas fa-eye"></i> Enable
+              </button>
+              ` : '<span style="color:#aaa;font-size:.85rem;">—</span>'}
+            </td>
+          </tr>`).join("");
+      }
+
+      function startEdit(id) {
+        document.getElementById(`name_${id}`).style.display = "none";
+        document.getElementById(`edit_${id}`).style.display = "inline-block";
+        document.getElementById(`editBtn_${id}`).style.display = "none";
+        document.getElementById(`saveBtn_${id}`).style.display = "inline-block";
+        document.getElementById(`edit_${id}`).focus();
+      }
+
+      async function saveEdit(id) {
+        const newName = document.getElementById(`edit_${id}`).value.trim();
+        if (!newName) { showMsg("Name cannot be empty", "error"); return; }
+        try {
+          const base = API_BASE_URL.replace(/\/$/, "");
+          const res = await fetch(`${base}/api/amenities/${id}`, {
+            method: "PUT",
+            headers: authHeaders(),
+            body: JSON.stringify({ name: newName }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Amenity renamed successfully");
+          await loadAllAmenities();
+        } catch (err) {
+          showMsg(err.message, "error");
+        }
+      }
+
+      async function toggleAmenity(id, enable) {
+        try {
+          const base = API_BASE_URL.replace(/\/$/, "");
+          const res = enable
+            ? await fetch(`${base}/api/amenities/${id}`, {
+                method: "PUT", headers: authHeaders(),
+                body: JSON.stringify({ isActive: true }),
+              })
+            : await fetch(`${base}/api/amenities/${id}`, {
+                method: "DELETE", headers: authHeaders(),
+              });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`Amenity ${enable ? "enabled" : "disabled"} successfully`);
+          await loadAllAmenities();
+        } catch (err) {
+          showMsg(err.message, "error");
+        }
+      }
+
+      async function addAmenity() {
+        const name  = document.getElementById("newAmenityName").value.trim();
+        const level = document.getElementById("newAmenityLevel").value;
+        if (!name) { showMsg("Please enter an amenity name", "error"); return; }
+        try {
+          const base = API_BASE_URL.replace(/\/$/, "");
+          const res = await fetch(`${base}/api/amenities`, {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ name, level }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          document.getElementById("newAmenityName").value = "";
+          showMsg(`"${name}" added to ${level}-level amenities`);
+          await loadAllAmenities();
+        } catch (err) {
+          showMsg(err.message, "error");
+        }
+      }
+
+      // Init
+      (async () => {
+        if (!token) { window.location.href = "login.html"; return; }
+        try {
+          const raw = sessionStorage.getItem("userData");
+          userData = raw ? JSON.parse(raw) : null;
+          isAdmin = userData?.user?.role === "admin";
+          if (!isAdmin) {
+            document.getElementById("addSection").style.display = "none";
+            document.getElementById("adminOnlyNotice").style.display = "inline";
+          }
+          await loadAllAmenities();
+        } catch (e) {
+          window.location.href = "login.html";
+        }
+      })();
+    </script>
+  </body>
+</html>

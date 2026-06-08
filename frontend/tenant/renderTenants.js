@@ -65,6 +65,14 @@ function renderTenants() {
                 <i class="fas fa-edit"></i>
                 Edit
               </button>
+              ${tenant.status === "Inactive" ? `
+              <button class="action-btn btn-success" onclick="reactivateTenant('${
+                tenant._id || tenant.id
+              }')">
+                <i class="fas fa-power-off"></i>
+                Reactivate
+              </button>
+              ` : `
               <button class="action-btn btn-success" onclick="extendLease('${
                 tenant._id || tenant.id
               }')">
@@ -80,9 +88,10 @@ function renderTenants() {
               <button class="action-btn btn-danger" onclick="deleteTenant('${
                 tenant._id || tenant.id
               }')">
-                <i class="fas fa-trash"></i>
-                Remove
+                <i class="fas fa-power-off"></i>
+                Deactivate
               </button>
+              `}
             </div>
           </div>
         `

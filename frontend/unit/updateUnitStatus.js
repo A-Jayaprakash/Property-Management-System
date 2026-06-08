@@ -1,47 +1,39 @@
-// Update unit status
+// Update unit status — prompt the user, then call the API
 async function updateUnitStatus(unitId, currentStatus) {
   const newStatus = prompt(
-    `Current status: ${currentStatus}\nEnter new status (available / occupied / maintenance / reserved):`
+    `Current status: ${currentStatus}\nEnter new status:\navailable / occupied / maintenance / reserved`
   )?.toLowerCase();
 
-  if (
-    !newStatus ||
-    !["available", "occupied", "maintenance", "reserved"].includes(newStatus)
-  ) {
-    alert(
-      "Invalid status. Please use: available, occupied, maintenance, or reserved"
-    );
+  if (!newStatus) return; // user cancelled
+
+  if (!["available", "occupied", "maintenance", "reserved"].includes(newStatus)) {
+    alert("Invalid status. Please enter one of: available, occupied, maintenance, reserved");
     return;
   }
 
-  // ❌ Block changing from "occupied" to "available" directly
-  if (currentStatus === "occupied" && newStatus === "available") {
-    alert(
-      "Cannot mark unit as available while an active tenant is still occupying it.\nPlease terminate the lease first."
-    );
-    return; // Block the change
-  }
+  if (newStatus === currentStatus) return; // nothing to do
 
   try {
-    const response = await fetch(`${API_BASE_URL}/api/units/${unitId}/status`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        status: newStatus,
-      }),
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/units/${unitId}/status`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus }),
+      }
+    );
 
     const result = await response.json();
 
     if (response.ok) {
       loadUnits(currentPage);
       loadStats();
-      alert("Unit status updated successfully!");
+      showSuccess(`Unit status updated to "${newStatus}" successfully`);
     } else {
-      alert(`Error: ${result.message}`);
+      alert(`Could not update status: ${result.message}`);
     }
   } catch (error) {
     console.error("Error updating unit status:", error);

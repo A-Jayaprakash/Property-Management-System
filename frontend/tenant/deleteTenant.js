@@ -1,57 +1,77 @@
-// Delete tenant - FIXED VERSION
+// Deactivate tenant — keeps profile for auditing, frees the unit
 async function deleteTenant(tenantId) {
+  const tenant = tenants.find((t) => (t._id || t.id) === tenantId);
+  if (!tenant) return;
+
+  if (tenant.status === "Inactive") {
+    showNotification("This tenant is already inactive.", "warning");
+    return;
+  }
+
   if (
     !confirm(
-      "Are you sure you want to remove this tenant? This action cannot be undone."
+      `Deactivate ${tenant.fullName}?\n\nTheir profile will be kept as Inactive for auditing, and their unit will be marked as available.`
     )
   ) {
     return;
   }
 
   try {
-    // Find tenant using both possible ID formats
-    const tenant = tenants.find((t) => (t._id || t.id) === tenantId);
+    // Resolve unitId (populated object or plain string)
+    const rawUnitId = tenant.unitId;
+    const unitId =
+      rawUnitId && typeof rawUnitId === "object"
+        ? rawUnitId._id || rawUnitId.id
+        : rawUnitId;
 
-    if (!tenant) {
-      throw new Error("Tenant not found");
-    }
-
-    console.log("Tenant found:", tenant);
-    console.log("Tenant unitId:", tenant.unitId);
-
-    const response = await fetch(`${API_BASE_URL}/api/tenants/${tenantId}`, {
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    });
+    // Call the deactivate endpoint
+    const response = await fetch(
+      `${API_BASE_URL}/api/tenants/${tenantId}/deactivate`,
+      {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+      }
+    );
 
     if (!response.ok) {
-      throw new Error("Failed to delete tenant");
+      const errData = await response.json().catch(() => null);
+      throw new Error(errData?.message || "Failed to deactivate tenant");
     }
 
-    // Update unit status to available - only if unitId exists and is valid
-    if (tenant.unitId) {
-      try {
-        await updateUnitStatus(tenant.unitId._id, "available");
-        console.log("Unit status updated to available");
-      } catch (unitError) {
-        console.warn("Failed to update unit status:", unitError.message);
-        // Continue with tenant deletion even if unit update fails
+    // Free the unit
+    if (unitId) {
+      const unitRes = await fetch(
+        `${API_BASE_URL}/api/units/${unitId}/status`,
+        {
+          method: "PATCH",
+          headers: getAuthHeaders(),
+          body: JSON.stringify({ status: "available" }),
+        }
+      );
+      if (!unitRes.ok) {
+        const unitErr = await unitRes.json().catch(() => null);
+        showNotification(
+          `Tenant deactivated, but unit status could not be updated: ${
+            unitErr?.message || "unknown error"
+          }. Update it manually from the Unit page.`,
+          "warning"
+        );
       }
-    } else {
-      console.warn("No unitId found for tenant, skipping unit status update");
     }
 
-    // Remove tenant from arrays using the same ID matching logic
-    tenants = tenants.filter((t) => (t._id || t.id) !== tenantId);
-    filteredTenants = filteredTenants.filter(
-      (t) => (t._id || t.id) !== tenantId
-    );
+    // Update local state — mark as Inactive instead of removing
+    const index = tenants.findIndex((t) => (t._id || t.id) === tenantId);
+    if (index !== -1) tenants[index] = { ...tenants[index], status: "Inactive" };
+    filteredTenants = [...tenants];
 
     renderTenants();
     updateStats();
-    showNotification("Tenant removed successfully", "success");
+    showNotification(
+      `${tenant.fullName} has been deactivated. Profile retained for auditing.`,
+      "success"
+    );
   } catch (error) {
-    console.error("Error deleting tenant:", error);
-    showNotification("Failed to remove tenant", "error");
+    console.error("Error deactivating tenant:", error);
+    showNotification(error.message || "Failed to deactivate tenant", "error");
   }
 }

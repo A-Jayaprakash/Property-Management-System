@@ -19,4 +19,12 @@ function updateUserInfo() {
 
   // Update role
   userRole.textContent = (user.role || "tenant").toUpperCase();
+
+  // Show amenities card and quick action only for admins
+  if (user.role === "admin") {
+    const amenitiesCard = document.getElementById("amenitiesCard");
+    if (amenitiesCard) amenitiesCard.style.display = "";
+    const amenitiesQuickAction = document.getElementById("amenitiesQuickAction");
+    if (amenitiesQuickAction) amenitiesQuickAction.style.display = "";
+  }
 }

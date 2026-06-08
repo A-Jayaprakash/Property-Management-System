@@ -46,6 +46,18 @@ const createUnit = async (req, res) => {
       });
     }
 
+    // Enforce the property's unit cap
+    const existingUnitCount = await Unit.countDocuments({
+      property: propertyExists._id,
+      is_active: true,
+    });
+
+    if (existingUnitCount >= propertyExists.unitCount) {
+      return res.status(400).json({
+        message: `Unit limit reached. "${propertyExists.name}" is configured for ${propertyExists.unitCount} unit${propertyExists.unitCount !== 1 ? "s" : ""} and already has ${existingUnitCount}. Update the property's unit count if you need more.`,
+      });
+    }
+
     // Check if unit number already exists in the property
     const existingUnit = await Unit.findOne({
       unit_number,
