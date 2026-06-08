@@ -12,6 +12,7 @@ dotenv.config();
 const propertyRoutes = require("./routes/propertyRoutes");
 const unitRoutes = require("./routes/unitRoutes");
 const tenantRoutes = require("./routes/tenantRoutes");
+const amenityRoutes = require("./routes/amenityRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -72,7 +73,41 @@ const connectDB = async () => {
   }
 };
 
-connectDB();
+// Seed default amenities if the collection is empty
+const seedAmenities = async () => {
+  try {
+    const Amenity = require("./models/Amenity");
+    const count = await Amenity.countDocuments();
+    if (count === 0) {
+      const defaults = [
+        // Property-level (building-wide)
+        { name: "Elevator",     level: "property" },
+        { name: "Gym",          level: "property" },
+        { name: "Pool",         level: "property" },
+        { name: "Garden",       level: "property" },
+        { name: "Security",     level: "property" },
+        { name: "Parking",      level: "property" },
+        { name: "Power Backup", level: "property" },
+        { name: "Intercom",     level: "property" },
+        { name: "Water Supply", level: "property" },
+        // Unit-level (per unit)
+        { name: "AC",             level: "unit" },
+        { name: "Heating",        level: "unit" },
+        { name: "Balcony",        level: "unit" },
+        { name: "Storage",        level: "unit" },
+        { name: "Furnished",      level: "unit" },
+        { name: "Semi-Furnished", level: "unit" },
+        { name: "Wifi",           level: "unit" },
+      ];
+      await Amenity.insertMany(defaults);
+      console.log(`Seeded ${defaults.length} default amenities`);
+    }
+  } catch (err) {
+    console.error("Failed to seed amenities:", err.message);
+  }
+};
+
+connectDB().then(seedAmenities);
 
 // Health endpoint (useful for Render health checks)
 /*
@@ -95,6 +130,7 @@ app.get("/debug", (_req, res) => {
       properties: "/api/properties",
       tenants: "/api/tenants",
       units: "/api/units",
+        amenities: "/api/amenities",
     },
   });
 });
@@ -107,6 +143,7 @@ console.log("Registering protected routes...");
 app.use("/api/properties", verifyToken, propertyRoutes);
 app.use("/api/tenants", verifyToken, tenantRoutes);
 app.use("/api/units", verifyToken, unitRoutes);
+app.use("/api/amenities", verifyToken, amenityRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
 // Serve static files from frontend

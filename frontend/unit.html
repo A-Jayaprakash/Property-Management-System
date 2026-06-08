@@ -208,35 +208,8 @@
 
           <div class="form-group">
             <label>Unit Amenities <small style="color:#888;font-weight:normal;">(specific to this unit)</small></label>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input type="checkbox" id="ac" name="amenities" value="AC" />
-                <label for="ac">AC</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="heating" name="amenities" value="Heating" />
-                <label for="heating">Heating</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="balcony" name="amenities" value="Balcony" />
-                <label for="balcony">Balcony</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="storage" name="amenities" value="Storage" />
-                <label for="storage">Storage</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="furnished" name="amenities" value="Furnished" />
-                <label for="furnished">Furnished</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="semi_furnished" name="amenities" value="Semi-Furnished" />
-                <label for="semi_furnished">Semi-Furnished</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="wifi" name="amenities" value="Wifi" />
-                <label for="wifi">WiFi</label>
-              </div>
+            <div id="unitAmenitiesContainer" class="checkbox-group">
+              <small style="color:#aaa;">Loading amenities…</small>
             </div>
           </div>
 
@@ -267,6 +240,7 @@
       let editingUnitId = null;
     </script>
     <script src="unit/config.js"></script>
+    <script src="unit/loadUnitAmenities.js"></script>
     <script src="unit/checkPropertyCapacity.js"></script>
     <script src="unit/applyFilters.js"></script>
     <script src="unit/clearFilters.js"></script>

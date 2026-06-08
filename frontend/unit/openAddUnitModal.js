@@ -24,6 +24,9 @@ async function openAddUnitModal() {
     // Populate dropdowns with fresh data
     populatePropertyDropdowns();
 
+    // Reset amenity checkboxes (uncheck all) for a clean add form
+    await loadUnitAmenities([]);
+
     // Show the modal
     document.getElementById("unitModal").style.display = "block";
 

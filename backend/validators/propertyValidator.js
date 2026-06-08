@@ -29,13 +29,9 @@ const propertySchema = Joi.object({
     "number.max": "Unit count must not exceed 10000",
     "any.required": "Unit count is required",
   }),
+  // Amenity list is now configurable by admin — accept any non-empty string
   amenities: Joi.array()
-    .items(
-      Joi.string().valid(
-        "Elevator", "Gym", "Pool", "Garden", "Security",
-        "Parking", "Power Backup", "Intercom", "Water Supply"
-      )
-    )
+    .items(Joi.string().min(1).max(80))
     .optional()
     .default([]),
   createdBy: Joi.string().optional().allow(null),

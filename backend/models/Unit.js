@@ -57,20 +57,8 @@ const unitSchema = new mongoose.Schema(
       enum: ["available", "occupied", "maintenance", "reserved"],
       default: "available",
     },
-    amenities: [
-      {
-        type: String,
-        enum: [
-          "AC",
-          "Heating",
-          "Balcony",
-          "Storage",
-          "Furnished",
-          "Semi-Furnished",
-          "Wifi",
-        ],
-      },
-    ],
+    // Amenity list is configurable by admin — no hardcoded enum
+    amenities: [{ type: String, trim: true }],
     description: {
       type: String,
       maxlength: 1000,

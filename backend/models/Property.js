@@ -31,22 +31,8 @@ const propertySchema = new mongoose.Schema({
     min: 1,
     required: true,
   },
-  amenities: [
-    {
-      type: String,
-      enum: [
-        "Elevator",
-        "Gym",
-        "Pool",
-        "Garden",
-        "Security",
-        "Parking",
-        "Power Backup",
-        "Intercom",
-        "Water Supply",
-      ],
-    },
-  ],
+  // Amenity list is configurable by admin — no hardcoded enum
+  amenities: [{ type: String, trim: true }],
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

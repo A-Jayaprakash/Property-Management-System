@@ -1,5 +1,6 @@
 // Initialize the application
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", async function () {
+  await loadUnitAmenities(); // populate checkboxes from API before anything else
   loadProperties();
   loadUnits();
   loadStats();

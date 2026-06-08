@@ -1,4 +1,4 @@
-function editProperty(id) {
+async function editProperty(id) {
   const property = properties.find((p) => p._id === id);
   if (!property) return;
 
@@ -27,10 +27,9 @@ function editProperty(id) {
   document.getElementById("propertyType").value = property.type;
   document.getElementById("unitCount").value = property.unitCount;
 
-  // Pre-check saved amenities
-  const amenityBoxes = document.querySelectorAll('input[name="amenities"]');
+  // Re-render amenity checkboxes with saved values pre-checked
   const saved = property.amenities || [];
-  amenityBoxes.forEach((cb) => { cb.checked = saved.includes(cb.value); });
+  await loadPropertyAmenities(saved);
 
   document.getElementById("propertyModal").style.display = "block";
 }

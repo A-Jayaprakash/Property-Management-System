@@ -7,6 +7,7 @@ const {
   updateTenant,
   deleteTenant,
   deactivateTenant,
+  reactivateTenant,
   relocateTenant,
   getTenantsByUnit,
   getTenantsByUnitId,
@@ -100,6 +101,11 @@ router.patch(
 // @desc    Deactivate a tenant (keeps profile, sets status Inactive)
 // @access  Private
 router.patch("/:id/deactivate", tenantIdValidation, deactivateTenant);
+
+// @route   PATCH /api/tenants/:id/reactivate
+// @desc    Reactivate an inactive tenant and assign to a unit
+// @access  Private
+router.patch("/:id/reactivate", tenantIdValidation, reactivateTenant);
 
 // @route   DELETE /api/tenants/:id
 // @desc    Hard-delete a tenant (admin only, for data correction)

@@ -413,6 +413,56 @@ const getTenantStats = async (req, res) => {
   }
 };
 
+// Reactivate an inactive tenant and assign them to a (new) unit
+const reactivateTenant = async (req, res) => {
+  try {
+    const { unitId, assignedUnit } = req.body;
+
+    if (!unitId || !assignedUnit) {
+      return res.status(400).json({
+        success: false,
+        message: "unitId and assignedUnit (unit number) are required to reactivate",
+      });
+    }
+
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+      return res.status(404).json({ success: false, message: "Tenant not found" });
+    }
+
+    if (tenant.status === "Active") {
+      return res.status(400).json({ success: false, message: "Tenant is already active" });
+    }
+
+    // Make sure the target unit is not occupied by another active tenant
+    const unitOccupied = await Tenant.findOne({ unitId, status: "Active" });
+    if (unitOccupied) {
+      return res.status(400).json({
+        success: false,
+        message: "This unit is already occupied by an active tenant",
+      });
+    }
+
+    tenant.status = "Active";
+    tenant.unitId = unitId;
+    tenant.assignedUnit = assignedUnit;
+    await tenant.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Tenant reactivated successfully",
+      data: tenant,
+    });
+  } catch (error) {
+    console.error("Error reactivating tenant:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to reactivate tenant",
+      error: error.message,
+    });
+  }
+};
+
 // Deactivate a tenant (soft vacate — keeps profile for auditing)
 const deactivateTenant = async (req, res) => {
   try {
@@ -476,6 +526,7 @@ module.exports = {
   updateTenant,
   deleteTenant,
   deactivateTenant,
+  reactivateTenant,
   relocateTenant,
   getTenantsByUnit,
   getTenantsByUnitId,
