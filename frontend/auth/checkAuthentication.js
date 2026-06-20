@@ -9,13 +9,15 @@ function checkAuthentication() {
   }
 
   try {
-    const userData = JSON.parse(userDataStr);
+    const parsed = JSON.parse(userDataStr);
 
-    // Store globally for easy access
+    // Login stores { user: {...} }; unwrap if needed
+    const user = parsed.user || parsed;
+
     authToken = token;
     window.userData = {
       token: token,
-      user: userData,
+      user: user,
     };
 
     isAuthenticated = true;

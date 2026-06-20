@@ -38,14 +38,13 @@ async function loadUnitsForProperty(editMode = false) {
       unitSelect.appendChild(option);
     });
 
-    // Auto-fill rent when unit is selected
-    unitSelect.addEventListener("change", function () {
+    // Auto-fill rent when unit is selected (use onchange to avoid accumulating listeners)
+    unitSelect.onchange = function () {
       const selectedOption = this.options[this.selectedIndex];
       if (selectedOption && selectedOption.dataset.rent) {
-        document.getElementById("monthlyRent").value =
-          selectedOption.dataset.rent;
+        document.getElementById("monthlyRent").value = selectedOption.dataset.rent;
       }
-    });
+    };
   } catch (error) {
     console.error("Error loading units:", error);
     showNotification("Failed to load units", "error");

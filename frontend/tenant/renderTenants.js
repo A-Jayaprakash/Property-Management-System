@@ -1,15 +1,20 @@
 // Render tenants
 function renderTenants() {
   const tenantGrid = document.getElementById("tenantGrid");
+  const emptyState  = document.getElementById("emptyState");
   const startIndex = (currentPage - 1) * tenantsPerPage;
   const endIndex = startIndex + tenantsPerPage;
   const currentTenants = filteredTenants.slice(startIndex, endIndex);
 
   if (currentTenants.length === 0) {
-    tenantGrid.innerHTML =
-      '<div class="empty-state"><i class="fas fa-search"></i><h3>No tenants found</h3><p>Try adjusting your search or filter criteria.</p></div>';
+    tenantGrid.style.display = "none";
+    emptyState.style.display = "block";
+    tenantGrid.innerHTML = "";
     return;
   }
+
+  emptyState.style.display = "none";
+  tenantGrid.style.display = "grid";
 
   tenantGrid.innerHTML = currentTenants
     .map(

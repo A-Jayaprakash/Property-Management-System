@@ -1,9 +1,7 @@
 // Authentication
 function checkAuthentication() {
-  const token =
-    sessionStorage.getItem("authToken") || localStorage.getItem("authToken");
-  const userDataStr =
-    sessionStorage.getItem("userData") || localStorage.getItem("userData");
+  const token       = sessionStorage.getItem("authToken");
+  const userDataStr = sessionStorage.getItem("userData");
 
   if (!token || !userDataStr) {
     window.location.href = "login.html";

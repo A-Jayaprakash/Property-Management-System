@@ -12,7 +12,10 @@ dotenv.config();
 const propertyRoutes = require("./routes/propertyRoutes");
 const unitRoutes = require("./routes/unitRoutes");
 const tenantRoutes = require("./routes/tenantRoutes");
-const amenityRoutes = require("./routes/amenityRoutes");
+const amenityRoutes     = require("./routes/amenityRoutes");
+const chargeRoutes      = require("./routes/chargeRoutes");
+const expenseTypeRoutes = require("./routes/expenseTypeRoutes");
+const billingRoutes     = require("./routes/billingRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -107,7 +110,52 @@ const seedAmenities = async () => {
   }
 };
 
-connectDB().then(seedAmenities);
+// Seed default charges and expense types if the collections are empty
+const seedChargesAndExpenses = async () => {
+  try {
+    const Charge      = require("./models/Charge");
+    const ExpenseType = require("./models/ExpenseType");
+
+    const chargeCount = await Charge.countDocuments();
+    if (chargeCount === 0) {
+      await Charge.insertMany([
+        // Unit-level charges
+        { name: "EB Charges",          chargeType: "Reading", level: "unit",     rate: 8, isActive: true  },
+        { name: "Water Charges",       chargeType: "Normal",  level: "unit",     rate: 0, isActive: true  },
+        { name: "General Maintenance", chargeType: "Normal",  level: "unit",     rate: 0, isActive: true  },
+        // Property-level charges
+        { name: "Property Housekeeping",     chargeType: "Normal", level: "property", rate: 0, isActive: true  },
+        { name: "Swimming Pool",             chargeType: "Normal", level: "property", rate: 0, isActive: true  },
+        { name: "Common Plumbing",           chargeType: "Normal", level: "property", rate: 0, isActive: false },
+        { name: "Common Lighting",           chargeType: "Normal", level: "property", rate: 0, isActive: false },
+        { name: "Swimming Pool Maintenance", chargeType: "Normal", level: "property", rate: 0, isActive: false },
+      ]);
+      console.log("Seeded default charges");
+    } else {
+      // Migration: move "Swimming Pool Usage" from unit level to property level and rename
+      await Charge.updateOne(
+        { $or: [{ name: "Swimming Pool Usage" }, { name: "Swimming Pool" }] },
+        { $set: { name: "Swimming Pool", level: "property", chargeType: "Normal" } }
+      );
+    }
+
+    const expenseCount = await ExpenseType.countDocuments();
+    if (expenseCount === 0) {
+      await ExpenseType.insertMany([
+        { name: "Property Tax" },
+        { name: "Water Tax" },
+        { name: "Painting Material & Labour" },
+        { name: "Electrical Works" },
+        { name: "Plumbing Material & Labour" },
+      ]);
+      console.log("Seeded default expense types");
+    }
+  } catch (err) {
+    console.error("Failed to seed charges/expense types:", err.message);
+  }
+};
+
+connectDB().then(seedAmenities).then(seedChargesAndExpenses);
 
 // Health endpoint (useful for Render health checks)
 /*
@@ -143,7 +191,10 @@ console.log("Registering protected routes...");
 app.use("/api/properties", verifyToken, propertyRoutes);
 app.use("/api/tenants", verifyToken, tenantRoutes);
 app.use("/api/units", verifyToken, unitRoutes);
-app.use("/api/amenities", verifyToken, amenityRoutes);
+app.use("/api/amenities",      verifyToken, amenityRoutes);
+app.use("/api/charges",       verifyToken, chargeRoutes);
+app.use("/api/expense-types", verifyToken, expenseTypeRoutes);
+app.use("/api/billing",       verifyToken, billingRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
 // Serve static files from frontend

@@ -120,6 +120,11 @@ function renderProperties(propertiesToRender) {
                             </button>
                         `
                         }
+                        <a class="btn btn-primary"
+                           href="billing.html?propertyId=${property._id}&name=${encodeURIComponent(property.name)}"
+                           style="text-decoration:none;">
+                          <i class="fas fa-file-invoice"></i> Monthly Bill
+                        </a>
                     </div>
                 `
                     : `
