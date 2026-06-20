@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Charges Configuration — PropertySync</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/home.css" />
+    <style>
+      .page-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; }
+      .page-header h1 { font-size:1.5rem; margin:0; }
+      .section { margin-bottom:2.5rem; }
+      .section h2 { font-size:1.1rem; margin-bottom:1rem; display:flex; align-items:center; gap:.5rem; color: var(--text-primary,#333); }
+      .cfg-table { width:100%; border-collapse:collapse; background:var(--card-bg,#fff); border-radius:10px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+      .cfg-table th, .cfg-table td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--border,#eee); }
+      .cfg-table th { background:var(--primary,#667eea); color:#fff; font-weight:600; font-size:.9rem; }
+      .cfg-table tr:last-child td { border-bottom:none; }
+      .cfg-table tr:hover td { background:var(--hover-bg,#f9f9f9); }
+      .badge-active   { display:inline-block; padding:2px 10px; border-radius:20px; background:#d4edda; color:#155724; font-size:.8rem; font-weight:600; }
+      .badge-inactive { display:inline-block; padding:2px 10px; border-radius:20px; background:#f8d7da; color:#721c24; font-size:.8rem; font-weight:600; }
+      .badge-type { display:inline-block; padding:2px 10px; border-radius:20px; font-size:.8rem; font-weight:600; }
+      .badge-reading { background:#d1ecf1; color:#0c5460; }
+      .badge-usage   { background:#fff3cd; color:#856404; }
+      .badge-normal  { background:#e2e3e5; color:#383d41; }
+      .tbl-btn { padding:5px 11px; border:none; border-radius:6px; cursor:pointer; font-size:.82rem; font-weight:600; }
+      .tbl-btn-warning { background:#ffc107; color:#000; }
+      .tbl-btn-danger  { background:#dc3545; color:#fff; }
+      .tbl-btn-success { background:#28a745; color:#fff; }
+      .tbl-btn-secondary { background:#6c757d; color:#fff; }
+      .tbl-btn:hover { opacity:.85; }
+      .add-form { display:flex; gap:.65rem; align-items:center; flex-wrap:wrap; margin-bottom:1.25rem; }
+      .add-form input, .add-form select { padding:8px 11px; border:1px solid var(--border,#ddd); border-radius:8px; font-size:.92rem; }
+      .add-form input { flex:1; min-width:130px; }
+      .inline-edit { padding:5px 8px; border:1px solid #ddd; border-radius:6px; font-size:.9rem; width:110px; }
+      .rate-edit { width:80px; }
+      #notification { display:none; padding:12px 16px; border-radius:8px; font-weight:600; margin-top:1rem; }
+    </style>
+  </head>
+  <body>
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <a href="home.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container">
+        <div class="page-header">
+          <h1><i class="fas fa-receipt"></i> Charges Configuration</h1>
+          <span id="adminNotice" style="color:#c00;display:none;">
+            <i class="fas fa-lock"></i> Admin only — view mode
+          </span>
+        </div>
+
+        <!-- ── Unit-Level Charges ── -->
+        <div class="section">
+          <h2><i class="fas fa-home" style="color:#28a745"></i> Unit-Level Charges</h2>
+          <div id="unitChargeForm" class="add-form">
+            <input type="text"   id="uc_name"   placeholder="Charge name…" maxlength="80" />
+            <select id="uc_type">
+              <option value="Normal">Normal</option>
+              <option value="Reading">Reading (meter)</option>
+              <option value="Usage">Usage (qty × rate)</option>
+            </select>
+            <input type="number" id="uc_rate" placeholder="Default rate" min="0" step="0.01" style="width:120px;" />
+            <button class="btn btn-primary" onclick="addCharge('unit')">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <table class="cfg-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Default Rate</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="unitChargeRows">
+              <tr><td colspan="5" style="color:#aaa;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── Property-Level Charges ── -->
+        <div class="section">
+          <h2><i class="fas fa-building" style="color:#667eea"></i> Property-Level Charges</h2>
+          <div id="propChargeForm" class="add-form">
+            <input type="text"   id="pc_name"   placeholder="Charge name…" maxlength="80" />
+            <select id="pc_type">
+              <option value="Normal">Normal</option>
+              <option value="Reading">Reading (meter)</option>
+              <option value="Usage">Usage (qty × rate)</option>
+            </select>
+            <input type="number" id="pc_rate" placeholder="Default rate" min="0" step="0.01" style="width:120px;" />
+            <button class="btn btn-primary" onclick="addCharge('property')">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <table class="cfg-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th>Default Rate</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="propChargeRows">
+              <tr><td colspan="5" style="color:#aaa;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- ── Expense Types ── -->
+        <div class="section">
+          <h2><i class="fas fa-tags" style="color:#fd7e14"></i> Expense Types</h2>
+          <div id="expenseForm" class="add-form">
+            <input type="text" id="et_name" placeholder="Expense type name…" maxlength="80" />
+            <button class="btn btn-primary" onclick="addExpenseType()">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <table class="cfg-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="expenseTypeRows">
+              <tr><td colspan="3" style="color:#aaa;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p id="notification"></p>
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      const token = sessionStorage.getItem("authToken");
+      let isAdmin = false;
+
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        window.location.href = "login.html";
+      }
+
+      function authHeaders() {
+        return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+      }
+
+      function base() { return API_BASE_URL.replace(/\/$/, ""); }
+
+      function showMsg(msg, type = "success") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "error" ? "#f8d7da" : "#fff3cd";
+        el.style.color      = type === "success" ? "#155724" : type === "error" ? "#721c24" : "#856404";
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = "none"; }, 4000);
+      }
+
+      // ── Charges ─────────────────────────────────────────────────────────────
+
+      async function loadCharges() {
+        try {
+          const res  = await fetch(`${base()}/api/charges?all=true`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          const all = data.data || [];
+          renderChargeRows("unitChargeRows", all.filter(c => c.level === "unit"),     5);
+          renderChargeRows("propChargeRows", all.filter(c => c.level === "property"), 5);
+        } catch (err) { showMsg("Failed to load charges: " + err.message, "error"); }
+      }
+
+      function typeBadge(t) {
+        const cls = t === "Reading" ? "badge-reading" : t === "Usage" ? "badge-usage" : "badge-normal";
+        return `<span class="badge-type ${cls}">${t}</span>`;
+      }
+
+      function renderChargeRows(tbodyId, charges, cols) {
+        const tbody = document.getElementById(tbodyId);
+        if (!charges.length) {
+          tbody.innerHTML = `<tr><td colspan="${cols}" style="color:#aaa;">None added yet.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = charges.map(c => `
+          <tr id="cr_${c._id}">
+            <td>
+              <span id="cn_${c._id}">${c.name}</span>
+              <input id="cei_${c._id}" class="inline-edit" value="${c.name}" style="display:none;" />
+            </td>
+            <td>${typeBadge(c.chargeType)}</td>
+            <td>
+              <span id="cr_rate_${c._id}">${c.rate ?? 0}</span>
+              <input id="cr_ratei_${c._id}" class="inline-edit rate-edit" type="number" min="0" step="0.01" value="${c.rate ?? 0}" style="display:none;" />
+            </td>
+            <td><span class="${c.isActive ? 'badge-active' : 'badge-inactive'}">${c.isActive ? "Active" : "Inactive"}</span></td>
+            <td style="display:flex;gap:5px;flex-wrap:wrap;">
+              ${isAdmin ? `
+              <button class="tbl-btn tbl-btn-warning" id="ceditBtn_${c._id}" onclick="startChargeEdit('${c._id}')">
+                <i class="fas fa-pen"></i> Edit
+              </button>
+              <button class="tbl-btn tbl-btn-success" id="csaveBtn_${c._id}" style="display:none" onclick="saveChargeEdit('${c._id}')">
+                <i class="fas fa-check"></i> Save
+              </button>
+              <button class="tbl-btn ${c.isActive ? 'tbl-btn-secondary' : 'tbl-btn-success'}"
+                onclick="toggleCharge('${c._id}', ${!c.isActive})">
+                <i class="fas fa-${c.isActive ? 'eye-slash' : 'eye'}"></i> ${c.isActive ? 'Disable' : 'Enable'}
+              </button>
+              ` : '<span style="color:#aaa;font-size:.85rem;">—</span>'}
+            </td>
+          </tr>`).join("");
+      }
+
+      function startChargeEdit(id) {
+        document.getElementById(`cn_${id}`).style.display       = "none";
+        document.getElementById(`cei_${id}`).style.display      = "inline-block";
+        document.getElementById(`cr_rate_${id}`).style.display  = "none";
+        document.getElementById(`cr_ratei_${id}`).style.display = "inline-block";
+        document.getElementById(`ceditBtn_${id}`).style.display = "none";
+        document.getElementById(`csaveBtn_${id}`).style.display = "inline-block";
+        document.getElementById(`cei_${id}`).focus();
+      }
+
+      async function saveChargeEdit(id) {
+        const name = document.getElementById(`cei_${id}`).value.trim();
+        const rate = parseFloat(document.getElementById(`cr_ratei_${id}`).value) || 0;
+        if (!name) { showMsg("Name cannot be empty", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/charges/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ name, rate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Charge updated");
+          await loadCharges();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function toggleCharge(id, enable) {
+        try {
+          const res  = await fetch(`${base()}/api/charges/${id}`, {
+            method: enable ? "PUT" : "DELETE", headers: authHeaders(),
+            body: enable ? JSON.stringify({ isActive: true }) : undefined,
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`Charge ${enable ? "enabled" : "disabled"}`);
+          await loadCharges();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function addCharge(level) {
+        const prefix = level === "unit" ? "uc" : "pc";
+        const name   = document.getElementById(`${prefix}_name`).value.trim();
+        const chargeType = document.getElementById(`${prefix}_type`).value;
+        const rate   = parseFloat(document.getElementById(`${prefix}_rate`).value) || 0;
+        if (!name) { showMsg("Please enter a charge name", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/charges`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ name, chargeType, level, rate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          document.getElementById(`${prefix}_name`).value = "";
+          document.getElementById(`${prefix}_rate`).value = "";
+          showMsg(`"${name}" added`);
+          await loadCharges();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      // ── Expense Types ────────────────────────────────────────────────────────
+
+      async function loadExpenseTypes() {
+        try {
+          const res  = await fetch(`${base()}/api/expense-types?all=true`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          renderExpenseRows(data.data || []);
+        } catch (err) { showMsg("Failed to load expense types: " + err.message, "error"); }
+      }
+
+      function renderExpenseRows(types) {
+        const tbody = document.getElementById("expenseTypeRows");
+        if (!types.length) {
+          tbody.innerHTML = '<tr><td colspan="3" style="color:#aaa;">None added yet.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = types.map(t => `
+          <tr id="er_${t._id}">
+            <td>
+              <span id="en_${t._id}">${t.name}</span>
+              <input id="eei_${t._id}" class="inline-edit" value="${t.name}" style="display:none;" />
+            </td>
+            <td><span class="${t.isActive ? 'badge-active' : 'badge-inactive'}">${t.isActive ? "Active" : "Inactive"}</span></td>
+            <td style="display:flex;gap:5px;flex-wrap:wrap;">
+              ${isAdmin ? `
+              <button class="tbl-btn tbl-btn-warning" id="eeditBtn_${t._id}" onclick="startExpenseEdit('${t._id}')">
+                <i class="fas fa-pen"></i> Rename
+              </button>
+              <button class="tbl-btn tbl-btn-success" id="esaveBtn_${t._id}" style="display:none" onclick="saveExpenseEdit('${t._id}')">
+                <i class="fas fa-check"></i> Save
+              </button>
+              <button class="tbl-btn ${t.isActive ? 'tbl-btn-secondary' : 'tbl-btn-success'}"
+                onclick="toggleExpense('${t._id}', ${!t.isActive})">
+                <i class="fas fa-${t.isActive ? 'eye-slash' : 'eye'}"></i> ${t.isActive ? 'Disable' : 'Enable'}
+              </button>
+              ` : '<span style="color:#aaa;font-size:.85rem;">—</span>'}
+            </td>
+          </tr>`).join("");
+      }
+
+      function startExpenseEdit(id) {
+        document.getElementById(`en_${id}`).style.display       = "none";
+        document.getElementById(`eei_${id}`).style.display      = "inline-block";
+        document.getElementById(`eeditBtn_${id}`).style.display = "none";
+        document.getElementById(`esaveBtn_${id}`).style.display = "inline-block";
+        document.getElementById(`eei_${id}`).focus();
+      }
+
+      async function saveExpenseEdit(id) {
+        const name = document.getElementById(`eei_${id}`).value.trim();
+        if (!name) { showMsg("Name cannot be empty", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/expense-types/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Expense type renamed");
+          await loadExpenseTypes();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function toggleExpense(id, enable) {
+        try {
+          const res  = await fetch(`${base()}/api/expense-types/${id}`, {
+            method: enable ? "PUT" : "DELETE", headers: authHeaders(),
+            body: enable ? JSON.stringify({ isActive: true }) : undefined,
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`Expense type ${enable ? "enabled" : "disabled"}`);
+          await loadExpenseTypes();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function addExpenseType() {
+        const name = document.getElementById("et_name").value.trim();
+        if (!name) { showMsg("Please enter an expense type name", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/expense-types`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          document.getElementById("et_name").value = "";
+          showMsg(`"${name}" added`);
+          await loadExpenseTypes();
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      // ── Init ─────────────────────────────────────────────────────────────────
+
+      (async () => {
+        if (!token) { window.location.href = "login.html"; return; }
+        try {
+          const raw  = sessionStorage.getItem("userData");
+          const user = raw ? JSON.parse(raw) : null;
+          isAdmin    = user?.user?.role === "admin";
+          if (!isAdmin) {
+            document.getElementById("adminNotice").style.display = "inline";
+            ["unitChargeForm", "propChargeForm", "expenseForm"].forEach(id => {
+              document.getElementById(id).style.display = "none";
+            });
+          }
+          await Promise.all([loadCharges(), loadExpenseTypes()]);
+        } catch (e) {
+          window.location.href = "login.html";
+        }
+      })();
+    </script>
+  </body>
+</html>

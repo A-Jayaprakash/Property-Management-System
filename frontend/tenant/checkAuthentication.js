@@ -6,7 +6,9 @@ function checkAuthentication() {
     return;
   }
 
-  const user = JSON.parse(userData);
+  const parsed = JSON.parse(userData);
+  const user = parsed.user || parsed;
+
   if (user.role !== "manager" && user.role !== "admin") {
     showNotification("Access denied. Manager or Admin role required.", "error");
     window.location.href = "home.html";

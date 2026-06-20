@@ -131,7 +131,7 @@
 
           // Store authentication data in sessionStorage
           storage.set("authToken", data.token);
-          storage.set("userData", JSON.stringify(data.user));
+          storage.set("userData", JSON.stringify({ user: data.user }));
 
           // Role-based redirection
           setTimeout(() => {
