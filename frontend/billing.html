@@ -158,10 +158,10 @@
       }
 
       async function loadExpenseTypes() {
-        const res  = await fetch(`${base()}/api/expense-types`, { headers: authHeaders() });
+        const res  = await fetch(`${base()}/api/expense-types?level=unit`, { headers: authHeaders() });
         const data = await res.json();
         if (!data.success) throw new Error(data.message);
-        expenseTypes = (data.data || []).filter(t => t.isActive);
+        expenseTypes = data.data || [];
       }
 
       // ── Load Bill ──────────────────────────────────────────────────────────
