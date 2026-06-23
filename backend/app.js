@@ -16,6 +16,7 @@ const amenityRoutes     = require("./routes/amenityRoutes");
 const chargeRoutes      = require("./routes/chargeRoutes");
 const expenseTypeRoutes = require("./routes/expenseTypeRoutes");
 const billingRoutes     = require("./routes/billingRoutes");
+const expenseRoutes     = require("./routes/expenseRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -142,13 +143,21 @@ const seedChargesAndExpenses = async () => {
     const expenseCount = await ExpenseType.countDocuments();
     if (expenseCount === 0) {
       await ExpenseType.insertMany([
-        { name: "Property Tax" },
-        { name: "Water Tax" },
-        { name: "Painting Material & Labour" },
-        { name: "Electrical Works" },
-        { name: "Plumbing Material & Labour" },
+        { name: "Property Tax",               level: "property" },
+        { name: "Water Tax",                  level: "property" },
+        { name: "Building Maintenance",       level: "property" },
+        { name: "Painting Material & Labour", level: "unit" },
+        { name: "Electrical Works",           level: "unit" },
+        { name: "Plumbing Material & Labour", level: "unit" },
       ]);
       console.log("Seeded default expense types");
+    } else {
+      // Migration: set level on existing records that are missing it
+      await ExpenseType.updateMany({ level: { $exists: false } }, { $set: { level: "unit" } });
+      await ExpenseType.updateMany(
+        { name: { $in: ["Property Tax", "Water Tax", "Building Maintenance"] }, level: "unit" },
+        { $set: { level: "property" } }
+      );
     }
   } catch (err) {
     console.error("Failed to seed charges/expense types:", err.message);
@@ -195,6 +204,7 @@ app.use("/api/amenities",      verifyToken, amenityRoutes);
 app.use("/api/charges",       verifyToken, chargeRoutes);
 app.use("/api/expense-types", verifyToken, expenseTypeRoutes);
 app.use("/api/billing",       verifyToken, billingRoutes);
+app.use("/api/expenses",      verifyToken, expenseRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
 // Serve static files from frontend

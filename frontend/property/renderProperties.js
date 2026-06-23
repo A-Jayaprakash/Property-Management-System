@@ -125,6 +125,11 @@ function renderProperties(propertiesToRender) {
                            style="text-decoration:none;">
                           <i class="fas fa-file-invoice"></i> Monthly Bill
                         </a>
+                        <a class="btn"
+                           href="expenses.html?propertyId=${property._id}&name=${encodeURIComponent(property.name)}"
+                           style="text-decoration:none;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff;">
+                          <i class="fas fa-receipt"></i> Expenses
+                        </a>
                     </div>
                 `
                     : `
