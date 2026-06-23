@@ -29,6 +29,7 @@
 }
 .period-status.draft     { background: #fff3cd; color: #856404; }
 .period-status.published { background: #d4edda; color: #155724; }
+.period-status.finalized { background: #d4edda; color: #155724; }
 
 /* ── Action buttons bar ── */
 .bill-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
