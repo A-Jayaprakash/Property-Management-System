@@ -20,8 +20,8 @@ function updateUserInfo() {
   // Update role
   userRole.textContent = (user.role || "tenant").toUpperCase();
 
-  // Show admin-only cards and quick actions
-  if (user.role === "admin") {
+  // Show admin/manager cards and quick actions
+  if (user.role === "admin" || user.role === "manager") {
     const amenitiesCard = document.getElementById("amenitiesCard");
     if (amenitiesCard) amenitiesCard.style.display = "";
     const amenitiesQuickAction = document.getElementById("amenitiesQuickAction");
