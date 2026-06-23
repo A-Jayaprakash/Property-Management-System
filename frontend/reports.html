@@ -388,7 +388,7 @@
             opt.textContent = `Unit ${u.unit_number}${u.floor !== undefined ? " · Floor " + u.floor : ""} · ${u.status}`;
             uSel.appendChild(opt);
           });
-        } catch (_) {}
+        } catch (err) { showMsg("Could not load units: " + err.message); }
       }
 
       // ── Generate ──────────────────────────────────────────────────────────
@@ -692,15 +692,17 @@
         if (!token) { location.href = "login.html"; return; }
         try {
           const res  = await fetch(`${base()}/api/properties`, { headers: ah() });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
-          propertiesList = data.data || data.properties || [];
+          // Properties controller returns a bare array, not wrapped in { data: [...] }
+          propertiesList = Array.isArray(data) ? data : (data.data || data.properties || []);
           const pSel = document.getElementById("selProperty");
           propertiesList.forEach(p => {
             const opt = document.createElement("option");
             opt.value = p._id; opt.textContent = p.name;
             pSel.appendChild(opt);
           });
-        } catch (_) {}
+        } catch (err) { showMsg("Could not load properties: " + err.message); }
       })();
     </script>
   </body>
