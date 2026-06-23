@@ -271,7 +271,8 @@
         try {
           const raw = sessionStorage.getItem("userData");
           userData = raw ? JSON.parse(raw) : null;
-          isAdmin = userData?.user?.role === "admin";
+          const role = userData?.user?.role;
+          isAdmin = role === "admin" || role === "manager";
           if (!isAdmin) {
             document.getElementById("addSection").style.display = "none";
             document.getElementById("adminOnlyNotice").style.display = "inline";
