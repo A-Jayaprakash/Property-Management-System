@@ -81,7 +81,7 @@
         <!-- Notification -->
         <div id="notification" style="display:none;padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:1rem;"></div>
 
-        <!-- Unit cards -->
+        <!-- Billing grids rendered here -->
         <div id="unitCards">
           <div class="billing-empty">
             <i class="fas fa-calendar-alt" style="font-size:2.5rem;margin-bottom:.75rem;color:#ddd;display:block;"></i>
@@ -95,19 +95,18 @@
     <script src="auth/config.js"></script>
     <script>
       // ── Globals ────────────────────────────────────────────────────────────
-      const token       = sessionStorage.getItem("authToken");
-      const params      = new URLSearchParams(window.location.search);
-      const propertyId  = params.get("propertyId");
+      const token        = sessionStorage.getItem("authToken");
+      const params       = new URLSearchParams(window.location.search);
+      const propertyId   = params.get("propertyId");
       const propertyName = decodeURIComponent(params.get("name") || "Property");
 
-      let periodId      = null;
-      let periodStatus  = null;
-      let units         = [];       // active units with tenant
-      let unitCharges   = [];       // active unit-level charges
-      let propCharges   = [];       // active property-level charges
-      let expenseTypes  = [];       // active expense types
-      let prevReadings  = {};       // { "${unitId}_${chargeId}": number }
-      let unitExpCounters = {};     // { unitId: number } for unique per-unit expense row ids
+      let periodId     = null;
+      let periodStatus = null;
+      let units        = [];
+      let unitCharges  = [];
+      let propCharges  = [];
+      let expenseTypes = [];
+      let prevReadings = {};
 
       const MONTHS = ["","January","February","March","April","May","June",
                        "July","August","September","October","November","December"];
@@ -117,13 +116,10 @@
         sessionStorage.removeItem("userData");
         window.location.href = "login.html";
       }
-
       function authHeaders() {
         return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
       }
-
       function base() { return API_BASE_URL.replace(/\/$/, ""); }
-
       function showMsg(msg, type = "success") {
         const el = document.getElementById("notification");
         el.textContent = msg;
@@ -133,7 +129,6 @@
         clearTimeout(el._t);
         el._t = setTimeout(() => { el.style.display = "none"; }, 5000);
       }
-
       function fmt(n) { return Number(n || 0).toFixed(2); }
       function num(n) { return Number(n) || 0; }
 
@@ -141,16 +136,12 @@
       (async () => {
         if (!token) { window.location.href = "login.html"; return; }
         if (!propertyId) { showMsg("No property selected.", "error"); return; }
-
         document.getElementById("billingTitle").innerHTML =
           `<i class="fas fa-file-invoice"></i> Monthly Bill — ${propertyName}`;
         document.title = `Monthly Bill — ${propertyName}`;
-
-        // Default to current month/year
         const now = new Date();
         document.getElementById("selMonth").value = now.getMonth() + 1;
         document.getElementById("selYear").value  = now.getFullYear();
-
         try {
           await Promise.all([loadCharges(), loadExpenseTypes()]);
         } catch (e) {
@@ -182,18 +173,15 @@
           `<div class="billing-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>`;
         document.getElementById("billActions").style.display = "none";
         document.getElementById("periodStatusBadge").style.display = "none";
-        unitExpCounters = {};
 
-        // Reset button states for the new period being loaded
         const btnSave    = document.getElementById("btnSave");
         const btnPublish = document.getElementById("btnPublish");
-        btnSave.disabled    = false;
-        btnSave.innerHTML   = '<i class="fas fa-save"></i> Save Draft';
-        btnPublish.disabled = false;
+        btnSave.disabled     = false;
+        btnSave.innerHTML    = '<i class="fas fa-save"></i> Save Draft';
+        btnPublish.disabled  = false;
         btnPublish.innerHTML = '<i class="fas fa-lock"></i> Publish';
 
         try {
-          // 1. Get or create billing period
           const pRes  = await fetch(`${base()}/api/billing/periods`, {
             method: "POST", headers: authHeaders(),
             body: JSON.stringify({ propertyId, month, year }),
@@ -203,18 +191,15 @@
           periodId     = pData.data._id;
           periodStatus = pData.data.status;
 
-          // 2. Fetch units for this property (active, with tenants populated)
           const uRes  = await fetch(`${base()}/api/units/property/${propertyId}`, { headers: authHeaders() });
           const uData = await uRes.json();
           if (!uData.units) throw new Error(uData.message || "Failed to load units");
           units = uData.units || [];
 
-          // 3. Fetch existing bills for this period
           const bRes  = await fetch(`${base()}/api/billing/periods/${periodId}`, { headers: authHeaders() });
           const bData = await bRes.json();
           const existingBills = bData.success ? (bData.data.bills || []) : [];
 
-          // 4. Fetch previous readings for Reading-type charges
           const rRes  = await fetch(
             `${base()}/api/billing/previous-readings?propertyId=${propertyId}&month=${month}&year=${year}`,
             { headers: authHeaders() }
@@ -222,9 +207,8 @@
           const rData = await rRes.json();
           prevReadings = rData.success ? (rData.data || {}) : {};
 
-          // Render
           renderPeriodStatus(month, year);
-          renderUnitCards(existingBills);
+          renderBillingGrid(existingBills);
           document.getElementById("billActions").style.display = "flex";
 
           if (periodStatus === "published") {
@@ -249,121 +233,10 @@
           `${MONTHS[month]} ${year} · ${units.length} unit(s)`;
       }
 
-      // ── Render property-level charges card (entered once, applied to all units) ──
-      function renderPropertyChargesCard(existingBills) {
-        if (!propCharges.length) return;
-        const isLocked = periodStatus === "published";
-
-        // Extract existing property charge values from first bill that has them
-        const existingPropLineMap = {};
-        for (const b of existingBills) {
-          (b.lineItems || []).forEach(li => { existingPropLineMap[li.chargeId] = li; });
-          if (Object.keys(existingPropLineMap).length) break;
-        }
-
-        const rows = propCharges.map(ch => propChargeRow(ch, existingPropLineMap[ch._id], isLocked)).join("");
-
-        const card = `
-          <div class="unit-bill-card" id="card_propLevel" style="margin-bottom:1.5rem;">
-            <div class="unit-bill-header" style="background:linear-gradient(135deg,#28a745 0%,#20c997 100%);"
-                 onclick="toggleCard('propLevel')">
-              <div>
-                <div class="unit-title"><i class="fas fa-building"></i> Property-Level Charges</div>
-                <div class="unit-meta">Common charges — entered once, included in every unit's bill</div>
-              </div>
-              <div class="unit-total">₹ <span id="unitTotal_propLevel">0.00</span></div>
-            </div>
-            <div class="unit-bill-body" id="body_propLevel">
-              <table class="bill-table">
-                <thead>
-                  <tr>
-                    <th>Charge</th><th>Type</th><th>Prev Reading</th>
-                    <th>Curr / Units</th><th>Rate</th><th>Amount (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>${rows}</tbody>
-              </table>
-            </div>
-          </div>`;
-
-        document.getElementById("unitCards").insertAdjacentHTML("afterbegin", card);
-        recalcPropTotal();
-      }
-
-      function propChargeRow(ch, existing, isLocked) {
-        const typeCls = ch.chargeType === "Reading" ? "badge-reading" : ch.chargeType === "Usage" ? "badge-usage" : "badge-normal";
-        const prevVal  = existing?.prevReading ?? prevReadings[`_prop_${ch._id}`] ?? "";
-        const currVal  = existing?.currReading ?? "";
-        const unitsVal = existing?.units  ?? "";
-        const amtVal   = existing?.amount ?? "";
-
-        let cells = "";
-        if (ch.chargeType === "Reading") {
-          cells = `
-            <td><input type="number" id="prop_prev_${ch._id}" value="${prevVal}" readonly /></td>
-            <td><input type="number" id="prop_curr_${ch._id}" value="${currVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="onPropReadingChange('${ch._id}',${ch.rate})" /></td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="prop_amt_${ch._id}" value="${amtVal}" readonly class="computed-val" /></td>`;
-        } else if (ch.chargeType === "Usage") {
-          cells = `
-            <td>—</td>
-            <td><input type="number" id="prop_units_${ch._id}" value="${unitsVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="onPropUsageChange('${ch._id}',${ch.rate})" /></td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="prop_amt_${ch._id}" value="${amtVal}" readonly class="computed-val" /></td>`;
-        } else {
-          cells = `
-            <td>—</td><td>—</td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="prop_amt_${ch._id}" value="${amtVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="recalcPropTotal()" /></td>`;
-        }
-
-        return `<tr>
-          <td>${ch.name}</td>
-          <td><span class="charge-type-badge ${typeCls}">${ch.chargeType}</span></td>
-          ${cells}
-        </tr>`;
-      }
-
-      function recalcPropTotal() {
-        let total = 0;
-        propCharges.forEach(ch => {
-          total += num(document.getElementById(`prop_amt_${ch._id}`)?.value);
-        });
-        const el = document.getElementById("unitTotal_propLevel");
-        if (el) el.textContent = fmt(total);
-        // Property charges change affects every unit total
-        recalcAllTotals();
-      }
-
-      function recalcAllTotals() {
-        units.forEach(u => recalcTotal(u._id));
-      }
-
-      function onPropReadingChange(chargeId, rate) {
-        const prev  = num(document.getElementById(`prop_prev_${chargeId}`)?.value);
-        const curr  = num(document.getElementById(`prop_curr_${chargeId}`)?.value);
-        const u     = Math.max(0, curr - prev);
-        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
-        if (amtEl) amtEl.value = fmt(u * num(rate));
-        recalcPropTotal();
-      }
-
-      function onPropUsageChange(chargeId, rate) {
-        const u     = num(document.getElementById(`prop_units_${chargeId}`)?.value);
-        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
-        if (amtEl) amtEl.value = fmt(u * num(rate));
-        recalcPropTotal();
-      }
-
-      // ── Render unit cards ─────────────────────────────────────────────────
-      function renderUnitCards(existingBills) {
+      // ── Render spreadsheet grid ────────────────────────────────────────────
+      function renderBillingGrid(existingBills) {
         const container = document.getElementById("unitCards");
+
         if (!units.length) {
           container.innerHTML = `<div class="billing-empty">No active units found for this property.</div>`;
           return;
@@ -371,222 +244,282 @@
 
         const billMap = {};
         existingBills.forEach(b => { billMap[b.unitId?._id || b.unitId] = b; });
-
         const isLocked = periodStatus === "published";
 
-        container.innerHTML = units.map(unit => {
-          const existing    = billMap[unit._id] || {};
-          const tenant      = unit.current_tenant || null;
-          const tenantName  = tenant?.fullName || "Vacant";
-          const tenantPhone = tenant?.phoneNumber || "";
+        // ── Property-Level Charges Table (one row per charge) ───────────────
+        let propSection = "";
+        if (propCharges.length) {
+          // Pull saved values from the first bill that has them
+          const propLineMap = {};
+          for (const b of existingBills) {
+            (b.lineItems || []).forEach(li => { propLineMap[li.chargeId] = li; });
+            if (Object.keys(propLineMap).length) break;
+          }
 
-          const existingLineMap = {};
-          (existing.lineItems || []).forEach(li => { existingLineMap[li.chargeId] = li; });
+          const propRows = propCharges.map(ch => {
+            const li      = propLineMap[ch._id] || {};
+            const prevVal = li.prevReading ?? prevReadings[`_prop_${ch._id}`] ?? "";
+            const typeCls = ch.chargeType === "Reading" ? "badge-reading"
+                          : ch.chargeType === "Usage"   ? "badge-usage" : "badge-normal";
 
-          unitExpCounters[unit._id] = 0;
-          const existingMisc = existing.miscItems || [];
-          const miscRowsHtml = existingMisc.map(m => {
-            unitExpCounters[unit._id]++;
-            const rowId = `${unit._id}_e${unitExpCounters[unit._id]}`;
-            return unitExpenseRowHtml(unit._id, rowId, m.expenseTypeId, m.description, m.amount, isLocked);
+            let inputCells = "";
+            if (ch.chargeType === "Reading") {
+              inputCells = `
+                <td>${prevVal !== "" ? prevVal : "—"}</td>
+                <td><input type="number" id="prop_curr_${ch._id}" value="${li.currReading ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="onPropReadingChange('${ch._id}',${ch.rate ?? 0})" />
+                    <input type="hidden" id="prop_prev_${ch._id}" value="${prevVal}" /></td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td class="col-calculated">
+                  <input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else if (ch.chargeType === "Usage") {
+              inputCells = `
+                <td>—</td>
+                <td><input type="number" id="prop_units_${ch._id}" value="${li.units ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="onPropUsageChange('${ch._id}',${ch.rate ?? 0})" /></td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td class="col-calculated">
+                  <input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else {
+              inputCells = `
+                <td>—</td>
+                <td>—</td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td><input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="recalcAllTotals()" /></td>`;
+            }
+
+            return `<tr>
+              <td class="prop-charge-name">${ch.name}</td>
+              <td><span class="charge-type-badge ${typeCls}">${ch.chargeType}</span></td>
+              ${inputCells}
+            </tr>`;
           }).join("");
 
-          const rentVal  = existing.rentAmount ?? unit.rent ?? "";
-          const totalVal = existing.totalAmount ? fmt(existing.totalAmount) : "0.00";
-          const expTotal = existingMisc.reduce((s, m) => s + (m.amount || 0), 0);
-
-          const rentRow = `
-            <tr class="row-rent">
-              <td colspan="2"><strong>Rent</strong></td>
-              <td>—</td><td>—</td><td>—</td>
-              <td><input type="number" id="rent_${unit._id}" value="${rentVal}" min="0" step="0.01"
-                ${isLocked ? "readonly" : ""} onchange="recalcTotal('${unit._id}')" /></td>
-            </tr>`;
-
-          const unitChargeRows = unitCharges.map(ch => chargeRow(unit._id, ch, existingLineMap[ch._id], isLocked)).join("");
-
-          return `
-          <div class="unit-bill-card" id="card_${unit._id}">
-            <div class="unit-bill-header" onclick="toggleCard('${unit._id}')">
-              <div>
-                <div class="unit-title">Unit ${unit.unit_number}${unit.floor != null ? ` · Floor ${unit.floor}` : ""}</div>
-                <div class="unit-meta">${tenantName}${tenantPhone ? " · " + tenantPhone : ""}</div>
-              </div>
-              <div class="unit-total">₹ <span id="unitTotal_${unit._id}">${totalVal}</span></div>
+          propSection = `
+            <div class="billing-section-label">
+              <i class="fas fa-building"></i> Property-Level Charges
+              <small>(entered once — included in every unit's total)</small>
             </div>
-            <div class="unit-bill-body" id="body_${unit._id}">
-              <table class="bill-table">
+            <div class="billing-grid-wrapper">
+              <table class="billing-grid prop-charges-grid">
                 <thead>
-                  <tr><th>Charge</th><th>Type</th><th>Prev Reading</th><th>Curr / Units</th><th>Rate</th><th>Amount (₹)</th></tr>
+                  <tr>
+                    <th class="col-unit-hd">Charge</th>
+                    <th>Type</th>
+                    <th>Prev Reading</th>
+                    <th>Curr Reading / Units</th>
+                    <th>Rate</th>
+                    <th class="col-calc-hd">Amount (₹)</th>
+                  </tr>
                 </thead>
-                <tbody>${rentRow}${unitChargeRows}</tbody>
+                <tbody>${propRows}</tbody>
               </table>
-              <div style="margin-top:1rem;text-align:right;font-size:1rem;font-weight:700;color:#333;">
-                Tenant Total: ₹ <span id="unitTotalBottom_${unit._id}">${totalVal}</span>
-              </div>
+            </div>`;
+        }
 
-              <!-- Owner Expenses — not added to tenant total -->
-              <div class="owner-expenses-section">
-                <div class="owner-expenses-header">
-                  <span><i class="fas fa-wallet"></i> Owner Expenses <small>(not charged to tenant)</small></span>
-                  <span style="font-weight:700;color:#e67e22;">₹ <span id="unitExpTotal_${unit._id}">${fmt(expTotal)}</span></span>
-                </div>
-                <div id="unitExpRows_${unit._id}">${miscRowsHtml}</div>
-                ${!isLocked ? `<button class="btn btn-secondary add-misc-btn" style="margin-top:.5rem;"
-                  onclick="addUnitExpenseRow('${unit._id}')">
-                  <i class="fas fa-plus"></i> Add Expense
-                </button>` : ""}
-              </div>
-            </div>
-          </div>`;
+        // ── Unit-Level Charges Table ──────────────────────────────────────────
+        // owner expense columns = one per expense type + Misc Name + Misc Amt
+        const ownerColCount = expenseTypes.length + 2;
+
+        // Build two-row header
+        // Normal charges use rowspan=2; Reading/Usage use colspan=2 + sub-row entries
+        let uh1 = `<th rowspan="2" class="col-unit-hd">Unit</th>
+                   <th rowspan="2" class="grid-charge-hd">Rent (₹)</th>`;
+        let uh2 = ``;
+
+        unitCharges.forEach(ch => {
+          if (ch.chargeType === "Reading") {
+            uh1 += `<th colspan="2" class="grid-charge-hd">${ch.name}</th>`;
+            uh2 += `<th>Curr Reading</th><th class="col-calc-hd">Amount (₹)</th>`;
+          } else if (ch.chargeType === "Usage") {
+            uh1 += `<th colspan="2" class="grid-charge-hd">${ch.name}</th>`;
+            uh2 += `<th>Units</th><th class="col-calc-hd">Amount (₹)</th>`;
+          } else {
+            uh1 += `<th rowspan="2" class="grid-charge-hd">${ch.name} (₹)</th>`;
+          }
+        });
+
+        // Owner expenses group header
+        uh1 += `<th colspan="${ownerColCount}" class="col-owner-hd">
+                  <i class="fas fa-wallet"></i> Owner Expenses
+                  <small style="font-weight:400;">(not billed to tenant)</small>
+                </th>`;
+        expenseTypes.forEach(et => {
+          uh2 += `<th class="col-owner-sub-hd">${et.name} (₹)</th>`;
+        });
+        uh2 += `<th class="col-owner-sub-hd">Misc Name</th>
+                <th class="col-owner-sub-hd">Misc (₹)</th>`;
+
+        uh1 += `<th rowspan="2" class="col-total-hd">Total Rent (₹)</th>`;
+
+        // Build unit rows
+        const uRows = units.map(unit => {
+          const existing = billMap[unit._id] || {};
+          const lineMap  = {};
+          (existing.lineItems || []).forEach(li => { lineMap[li.chargeId] = li; });
+
+          const miscMap  = {};
+          let miscFree   = {};
+          (existing.miscItems || []).forEach(m => {
+            if (m.expenseTypeId) miscMap[String(m.expenseTypeId)] = m;
+            else miscFree = m;
+          });
+
+          const tenantLabel = unit.current_tenant?.fullName || "Vacant";
+          const totalVal    = existing.totalAmount ? fmt(existing.totalAmount) : "0.00";
+
+          let cols = `<td class="col-unit">
+            <div class="unit-label">Unit ${unit.unit_number}</div>
+            <div class="unit-tenant">${tenantLabel}</div>
+          </td>`;
+
+          // Rent
+          cols += `<td><input type="number" id="rent_${unit._id}"
+            value="${existing.rentAmount ?? unit.rent ?? ''}"
+            min="0" step="0.01" ${isLocked ? "readonly" : ""}
+            oninput="recalcTotal('${unit._id}')" /></td>`;
+
+          // Unit-level charge columns
+          unitCharges.forEach(ch => {
+            const li      = lineMap[ch._id] || {};
+            const prevKey = `${unit._id}_${ch._id}`;
+            const prevVal = prevReadings[prevKey] ?? li.prevReading ?? "";
+
+            if (ch.chargeType === "Reading") {
+              cols += `<td>
+                  <input type="number" id="curr_${unit._id}_${ch._id}"
+                    value="${li.currReading ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    title="Previous reading: ${prevVal !== "" ? prevVal : "N/A"}"
+                    oninput="onReadingChange('${unit._id}','${ch._id}',${ch.rate ?? 0})" />
+                  <input type="hidden" id="prev_${unit._id}_${ch._id}" value="${prevVal}" />
+                </td>
+                <td class="col-calculated">
+                  <input type="number" id="amt_${unit._id}_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else if (ch.chargeType === "Usage") {
+              cols += `<td>
+                  <input type="number" id="units_${unit._id}_${ch._id}"
+                    value="${li.units ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    oninput="onUsageChange('${unit._id}','${ch._id}',${ch.rate ?? 0})" />
+                </td>
+                <td class="col-calculated">
+                  <input type="number" id="amt_${unit._id}_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else {
+              cols += `<td>
+                  <input type="number" id="amt_${unit._id}_${ch._id}"
+                    value="${li.amount ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    oninput="recalcTotal('${unit._id}')" />
+                </td>`;
+            }
+          });
+
+          // Owner expense type columns
+          expenseTypes.forEach(et => {
+            const m = miscMap[String(et._id)] || {};
+            cols += `<td class="col-owner-exp">
+                <input type="number" id="exp_${unit._id}_${et._id}"
+                  value="${m.amount ?? ''}" min="0" step="0.01"
+                  ${isLocked ? "readonly" : ""} />
+              </td>`;
+          });
+
+          // Free-form misc
+          cols += `<td class="col-owner-exp">
+              <input type="text" id="miscname_${unit._id}"
+                value="${miscFree.description ?? ''}" placeholder="Expense name"
+                ${isLocked ? "readonly" : ""} style="text-align:left;width:100px;" />
+            </td>
+            <td class="col-owner-exp">
+              <input type="number" id="miscamt_${unit._id}"
+                value="${miscFree.amount ?? ''}" min="0" step="0.01"
+                ${isLocked ? "readonly" : ""} />
+            </td>`;
+
+          // Tenant total (read-only)
+          cols += `<td class="col-total">
+              <input type="number" id="unitTotal_${unit._id}" value="${totalVal}" readonly />
+            </td>`;
+
+          return `<tr>${cols}</tr>`;
         }).join("");
 
-        renderPropertyChargesCard(existingBills);
+        const unitSection = `
+          <div class="billing-section-label">
+            <i class="fas fa-door-open"></i> Unit Bills
+          </div>
+          <div class="billing-grid-wrapper">
+            <table class="billing-grid">
+              <thead>
+                <tr>${uh1}</tr>
+                <tr>${uh2}</tr>
+              </thead>
+              <tbody>${uRows}</tbody>
+            </table>
+          </div>`;
+
+        container.innerHTML = propSection + unitSection;
         units.forEach(u => recalcTotal(u._id));
       }
 
-      function chargeRow(unitId, ch, existing, isLocked) {
-        const typeCls  = ch.chargeType === "Reading" ? "badge-reading" : ch.chargeType === "Usage" ? "badge-usage" : "badge-normal";
-        const prevKey  = `${unitId}_${ch._id}`;
-        // API's reading always wins — draft may have been saved before previous month was published
-        const prevVal  = prevReadings[prevKey] ?? existing?.prevReading ?? "";
-        const currVal  = existing?.currReading ?? "";
-        const unitsVal = existing?.units  ?? "";
-        const amtVal   = existing?.amount ?? "";
-
-        let cells = "";
-        if (ch.chargeType === "Reading") {
-          cells = `
-            <td><input type="number" id="prev_${unitId}_${ch._id}" value="${prevVal}" readonly /></td>
-            <td><input type="number" id="curr_${unitId}_${ch._id}" value="${currVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="onReadingChange('${unitId}','${ch._id}',${ch.rate})" /></td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="amt_${unitId}_${ch._id}" value="${amtVal}" readonly class="computed-val" /></td>`;
-        } else if (ch.chargeType === "Usage") {
-          cells = `
-            <td>—</td>
-            <td><input type="number" id="units_${unitId}_${ch._id}" value="${unitsVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="onUsageChange('${unitId}','${ch._id}',${ch.rate})" /></td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="amt_${unitId}_${ch._id}" value="${amtVal}" readonly class="computed-val" /></td>`;
-        } else {
-          cells = `
-            <td>—</td><td>—</td>
-            <td><span class="computed-val">${ch.rate ?? 0}</span></td>
-            <td><input type="number" id="amt_${unitId}_${ch._id}" value="${amtVal}" min="0" step="0.01"
-                  ${isLocked ? "readonly" : ""}
-                  oninput="recalcTotal('${unitId}')" /></td>`;
-        }
-
-        return `<tr>
-          <td>${ch.name}</td>
-          <td><span class="charge-type-badge ${typeCls}">${ch.chargeType}</span></td>
-          ${cells}
-        </tr>`;
-      }
-
-      function unitExpenseRowHtml(unitId, rowId, expTypeId, description, amount, isLocked) {
-        const etOptions = expenseTypes.map(t =>
-          `<option value="${t._id}" ${String(t._id) === String(expTypeId) ? "selected" : ""}>${t.name}</option>`
-        ).join("");
-        return `
-          <div class="misc-item-row" id="uerow_${rowId}">
-            <select id="ueet_${rowId}" ${isLocked ? "disabled" : ""}
-              onchange="syncUnitExpenseDesc('${rowId}')">
-              <option value="">— Expense Type —</option>
-              ${etOptions}
-            </select>
-            <input type="text" class="desc-input" id="uedesc_${rowId}"
-              placeholder="Description" value="${description || ""}" ${isLocked ? "readonly" : ""} />
-            <input type="number" id="ueamt_${rowId}" value="${amount || ""}" min="0" step="0.01"
-              placeholder="Amount" ${isLocked ? "readonly" : ""}
-              oninput="recalcUnitExpenses('${unitId}')" />
-            ${!isLocked ? `<button class="btn-remove-misc" title="Remove"
-              onclick="removeUnitExpenseRow('${unitId}','${rowId}')">
-              <i class="fas fa-times"></i></button>` : ""}
-          </div>`;
-      }
-
-      function syncUnitExpenseDesc(rowId) {
-        const sel  = document.getElementById(`ueet_${rowId}`);
-        const desc = document.getElementById(`uedesc_${rowId}`);
-        if (sel && sel.value && desc && !desc.value)
-          desc.value = sel.options[sel.selectedIndex].text;
-      }
-
-      function addUnitExpenseRow(unitId) {
-        unitExpCounters[unitId] = (unitExpCounters[unitId] || 0) + 1;
-        const rowId = `${unitId}_e${unitExpCounters[unitId]}`;
-        const container = document.getElementById(`unitExpRows_${unitId}`);
-        const div = document.createElement("div");
-        div.innerHTML = unitExpenseRowHtml(unitId, rowId, "", "", "", false);
-        container.appendChild(div.firstElementChild);
-      }
-
-      function removeUnitExpenseRow(unitId, rowId) {
-        const row = document.getElementById(`uerow_${rowId}`);
-        if (row) row.remove();
-        recalcUnitExpenses(unitId);
-      }
-
-      function recalcUnitExpenses(unitId) {
-        let total = 0;
-        document.querySelectorAll(`#unitExpRows_${unitId} [id^='ueamt_']`).forEach(inp => {
-          total += num(inp.value);
-        });
-        const el = document.getElementById(`unitExpTotal_${unitId}`);
-        if (el) el.textContent = fmt(total);
-      }
-
-      // ── Computed field updates ─────────────────────────────────────────────
+      // ── Computed field helpers ─────────────────────────────────────────────
       function onReadingChange(unitId, chargeId, rate) {
         const prev  = num(document.getElementById(`prev_${unitId}_${chargeId}`)?.value);
         const curr  = num(document.getElementById(`curr_${unitId}_${chargeId}`)?.value);
-        const units = Math.max(0, curr - prev);
-        const amt   = units * num(rate);
         const amtEl = document.getElementById(`amt_${unitId}_${chargeId}`);
-        if (amtEl) amtEl.value = fmt(amt);
+        if (amtEl) amtEl.value = fmt(Math.max(0, curr - prev) * num(rate));
         recalcTotal(unitId);
       }
 
       function onUsageChange(unitId, chargeId, rate) {
-        const u   = num(document.getElementById(`units_${unitId}_${chargeId}`)?.value);
-        const amt = u * num(rate);
+        const u     = num(document.getElementById(`units_${unitId}_${chargeId}`)?.value);
         const amtEl = document.getElementById(`amt_${unitId}_${chargeId}`);
-        if (amtEl) amtEl.value = fmt(amt);
+        if (amtEl) amtEl.value = fmt(u * num(rate));
         recalcTotal(unitId);
+      }
+
+      function onPropReadingChange(chargeId, rate) {
+        const prev  = num(document.getElementById(`prop_prev_${chargeId}`)?.value);
+        const curr  = num(document.getElementById(`prop_curr_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(Math.max(0, curr - prev) * num(rate));
+        recalcAllTotals();
+      }
+
+      function onPropUsageChange(chargeId, rate) {
+        const u     = num(document.getElementById(`prop_units_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(u * num(rate));
+        recalcAllTotals();
       }
 
       function recalcTotal(unitId) {
         let total = num(document.getElementById(`rent_${unitId}`)?.value);
-
-        // Unit-level charges
         unitCharges.forEach(ch => {
           total += num(document.getElementById(`amt_${unitId}_${ch._id}`)?.value);
         });
-
-        // Property-level charges (from shared top card)
         propCharges.forEach(ch => {
           total += num(document.getElementById(`prop_amt_${ch._id}`)?.value);
         });
-
-        const t = fmt(total);
-        const header = document.getElementById(`unitTotal_${unitId}`);
-        const bottom = document.getElementById(`unitTotalBottom_${unitId}`);
-        if (header) header.textContent = t;
-        if (bottom) bottom.textContent = t;
+        const el = document.getElementById(`unitTotal_${unitId}`);
+        if (el) el.value = fmt(total);
       }
 
-      function toggleCard(unitId) {
-        const body = document.getElementById(`body_${unitId}`);
-        if (body) body.style.display = body.style.display === "none" ? "" : "none";
+      function recalcAllTotals() {
+        units.forEach(u => recalcTotal(u._id));
       }
 
       // ── Collect form data ──────────────────────────────────────────────────
       function collectBills() {
-        // Property charges are entered once and replicated into every unit's lineItems
         const propLineItems = propCharges.map(ch => {
           const item = { chargeId: ch._id, description: ch.name, chargeType: ch.chargeType, rate: ch.rate ?? 0 };
           if (ch.chargeType === "Reading") {
@@ -602,12 +535,7 @@
 
         return units.map(unit => {
           const unitLineItems = unitCharges.map(ch => {
-            const item = {
-              chargeId:    ch._id,
-              description: ch.name,
-              chargeType:  ch.chargeType,
-              rate:        ch.rate ?? 0,
-            };
+            const item = { chargeId: ch._id, description: ch.name, chargeType: ch.chargeType, rate: ch.rate ?? 0 };
             if (ch.chargeType === "Reading") {
               item.prevReading = num(document.getElementById(`prev_${unit._id}_${ch._id}`)?.value);
               item.currReading = num(document.getElementById(`curr_${unit._id}_${ch._id}`)?.value);
@@ -618,22 +546,21 @@
             }
             return item;
           });
-          const lineItems = [...unitLineItems, ...propLineItems];
 
           const miscItems = [];
-          document.querySelectorAll(`#unitExpRows_${unit._id} .misc-item-row`).forEach(row => {
-            const rowId = row.id.replace("uerow_", "");
-            const etId  = document.getElementById(`ueet_${rowId}`)?.value || undefined;
-            const desc  = document.getElementById(`uedesc_${rowId}`)?.value?.trim();
-            const amt   = num(document.getElementById(`ueamt_${rowId}`)?.value);
-            if (desc || amt) miscItems.push({ expenseTypeId: etId || undefined, description: desc || "Expense", amount: amt });
+          expenseTypes.forEach(et => {
+            const amt = num(document.getElementById(`exp_${unit._id}_${et._id}`)?.value);
+            if (amt > 0) miscItems.push({ expenseTypeId: et._id, description: et.name, amount: amt });
           });
+          const miscName = document.getElementById(`miscname_${unit._id}`)?.value?.trim();
+          const miscAmt  = num(document.getElementById(`miscamt_${unit._id}`)?.value);
+          if (miscName || miscAmt) miscItems.push({ description: miscName || "Misc", amount: miscAmt });
 
           return {
             unitId:     unit._id,
             tenantId:   unit.current_tenant?._id || undefined,
             rentAmount: num(document.getElementById(`rent_${unit._id}`)?.value),
-            lineItems,
+            lineItems:  [...unitLineItems, ...propLineItems],
             miscItems,
           };
         });
@@ -666,7 +593,6 @@
         if (!periodId) { showMsg("Load a billing period first", "error"); return; }
         if (!confirm("Publishing will lock this billing period and freeze all tenant/unit data. Continue?")) return;
 
-        // Save bills + expenses first, then publish
         const saveRes  = await fetch(`${base()}/api/billing/periods/${periodId}/bills`, {
           method: "PUT", headers: authHeaders(),
           body: JSON.stringify({ bills: collectBills() }),
@@ -685,15 +611,13 @@
           if (!data.success) throw new Error(data.message);
           periodStatus = "published";
           document.getElementById("btnSave").disabled    = true;
-          btn.disabled = true;
+          btn.disabled  = true;
           btn.innerHTML = '<i class="fas fa-lock"></i> Published';
           document.getElementById("periodStatusBadge").className = "period-status published";
           document.getElementById("periodStatusBadge").innerHTML = '<i class="fas fa-lock"></i> Published';
           showMsg("Billing period published and locked.");
-          // Disable all inputs
-          document.querySelectorAll(".unit-bill-body input").forEach(i => i.setAttribute("readonly", true));
-          document.querySelectorAll(".unit-bill-body select").forEach(s => s.setAttribute("disabled", true));
-          document.querySelectorAll(".add-misc-btn, .btn-remove-misc").forEach(b => b.remove());
+          document.querySelectorAll(".billing-grid input:not([type='hidden'])").forEach(i => i.setAttribute("readonly", true));
+          document.querySelectorAll(".billing-grid select").forEach(s => s.setAttribute("disabled", true));
         } catch (err) {
           showMsg(err.message, "error");
           btn.disabled = false;
@@ -714,7 +638,6 @@
             return;
           }
           buildPrintSection(data.data);
-          // Give the browser a tick to paint the print section before opening dialog
           setTimeout(() => window.print(), 100);
         } catch (err) {
           showMsg("Print failed: " + err.message, "error");
@@ -722,17 +645,15 @@
       }
 
       function buildPrintSection(data) {
-        const { period, bills, expenses } = data;
-        const month  = MONTHS[period.month];
-        const year   = period.year;
-        const prop   = period.propertyId;
-        const propDisplay = prop?.name || propertyName;
-        const label  = period.status === "published" ? "FINAL" : "DRAFT";
+        const { period, bills } = data;
+        const month       = MONTHS[period.month];
+        const year        = period.year;
+        const propDisplay = period.propertyId?.name || propertyName;
+        const label       = period.status === "published" ? "FINAL" : "DRAFT";
 
-        // ── Tenant slips ──────────────────────────────────────────────────────
+        // ── Tenant slips (3 per row, 9 per A4 page) ──────────────────────────
         const slips = bills.map(bill => {
           const rows = [];
-
           if (bill.rentAmount) {
             rows.push(`<tr><td>Rent</td><td class="amount-col">₹${fmt(bill.rentAmount)}</td></tr>`);
           }
@@ -795,15 +716,14 @@
               <tr style="background:#fff3e0;">
                 <td style="padding:6pt 8pt;font-weight:700;">Unit ${b.unitNumber}</td>
                 <td style="padding:6pt 8pt;text-align:right;font-weight:700;">₹${fmt(unitTotal)}</td>
-              </tr>
-              ${itemRows}`;
+              </tr>${itemRows}`;
           }).join("");
 
           pages.push(`
             <div class="print-page">
               <div style="padding:24pt;font-family:Arial,sans-serif;font-size:10pt;">
                 <div style="border-bottom:2px solid #e67e22;padding-bottom:8pt;margin-bottom:14pt;">
-                  <div style="font-size:13pt;font-weight:700;color:#e67e22;">🏢 ${propDisplay}</div>
+                  <div style="font-size:13pt;font-weight:700;color:#e67e22;">${propDisplay}</div>
                   <div style="font-size:9pt;color:#666;margin-top:4pt;">
                     Owner Expenses by Unit — ${month} ${year} · ${label}
                   </div>
