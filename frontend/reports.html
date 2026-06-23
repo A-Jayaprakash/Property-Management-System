@@ -417,6 +417,7 @@
           }
 
           const res = await fetch(url, { headers: ah() });
+          if (res.status === 401) { logout(); return; }
           data = await res.json();
           if (!data.success) throw new Error(data.message);
 
@@ -692,6 +693,7 @@
         if (!token) { location.href = "login.html"; return; }
         try {
           const res  = await fetch(`${base()}/api/properties`, { headers: ah() });
+          if (res.status === 401) { logout(); return; }
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           const data = await res.json();
           // Properties controller returns a bare array, not wrapped in { data: [...] }
