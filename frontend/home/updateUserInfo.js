@@ -30,5 +30,9 @@ function updateUserInfo() {
     if (chargesCard) chargesCard.style.display = "";
     const chargesQuickAction = document.getElementById("chargesQuickAction");
     if (chargesQuickAction) chargesQuickAction.style.display = "";
+    const reportsCard = document.getElementById("reportsCard");
+    if (reportsCard) reportsCard.style.display = "";
+    const reportsQuickAction = document.getElementById("reportsQuickAction");
+    if (reportsQuickAction) reportsQuickAction.style.display = "";
   }
 }
