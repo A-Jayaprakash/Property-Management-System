@@ -8,7 +8,7 @@ const getAmenities = async (req, res) => {
     const filter = {};
     if (level) filter.level = level;
     // Non-admin callers only see active amenities; admins can see everything
-    const isAdmin = req.user?.role === "admin";
+    const isAdmin = req.user?.role === "admin" || req.user?.role === "manager";
     if (!isAdmin || all !== "true") filter.isActive = true;
 
     const amenities = await Amenity.find(filter).sort({ level: 1, name: 1 });
@@ -22,7 +22,7 @@ const getAmenities = async (req, res) => {
 // POST /api/amenities  (admin only)
 const createAmenity = async (req, res) => {
   try {
-    if (req.user?.role !== "admin") {
+    if (req.user?.role !== "admin" && req.user?.role !== "manager") {
       return res.status(403).json({ success: false, message: "Only admins can add amenities" });
     }
 
@@ -50,7 +50,7 @@ const createAmenity = async (req, res) => {
 // PUT /api/amenities/:id  (admin only)
 const updateAmenity = async (req, res) => {
   try {
-    if (req.user?.role !== "admin") {
+    if (req.user?.role !== "admin" && req.user?.role !== "manager") {
       return res.status(403).json({ success: false, message: "Only admins can edit amenities" });
     }
 
@@ -75,7 +75,7 @@ const updateAmenity = async (req, res) => {
 // DELETE /api/amenities/:id  (admin only — soft deletes by setting isActive=false)
 const deleteAmenity = async (req, res) => {
   try {
-    if (req.user?.role !== "admin") {
+    if (req.user?.role !== "admin" && req.user?.role !== "manager") {
       return res.status(403).json({ success: false, message: "Only admins can remove amenities" });
     }
 
