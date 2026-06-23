@@ -6,7 +6,8 @@ const getCharges = async (req, res) => {
     const { level, all } = req.query;
     const filter = {};
     if (level) filter.level = level;
-    if (req.user?.role !== "admin" || all !== "true") filter.isActive = true;
+    const isPrivileged = req.user?.role === "admin" || req.user?.role === "manager";
+    if (!isPrivileged || all !== "true") filter.isActive = true;
 
     const charges = await Charge.find(filter).sort({ level: 1, chargeType: 1, name: 1 });
     res.status(200).json({ success: true, data: charges });
@@ -18,7 +19,7 @@ const getCharges = async (req, res) => {
 // POST /api/charges  (admin only)
 const createCharge = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can add charges" });
 
     const { name, chargeType, level, rate } = req.body;
@@ -38,7 +39,7 @@ const createCharge = async (req, res) => {
 // PUT /api/charges/:id  (admin only)
 const updateCharge = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can edit charges" });
 
     const { name, chargeType, rate, isActive } = req.body;
@@ -59,7 +60,7 @@ const updateCharge = async (req, res) => {
 // DELETE /api/charges/:id — soft-disable (admin only)
 const deleteCharge = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can remove charges" });
 
     const charge = await Charge.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });

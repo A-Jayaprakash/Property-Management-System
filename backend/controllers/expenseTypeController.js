@@ -5,7 +5,8 @@ const getExpenseTypes = async (req, res) => {
     const { level, all } = req.query;
     const filter = {};
     if (level) filter.level = level;
-    if (req.user?.role !== "admin" || all !== "true") filter.isActive = true;
+    const isPrivileged = req.user?.role === "admin" || req.user?.role === "manager";
+    if (!isPrivileged || all !== "true") filter.isActive = true;
 
     const types = await ExpenseType.find(filter).sort({ name: 1 });
     res.status(200).json({ success: true, data: types });
@@ -16,7 +17,7 @@ const getExpenseTypes = async (req, res) => {
 
 const createExpenseType = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can add expense types" });
 
     const { name, level } = req.body;
@@ -35,7 +36,7 @@ const createExpenseType = async (req, res) => {
 
 const updateExpenseType = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can edit expense types" });
 
     const { name, isActive } = req.body;
@@ -55,7 +56,7 @@ const updateExpenseType = async (req, res) => {
 
 const deleteExpenseType = async (req, res) => {
   try {
-    if (req.user?.role !== "admin")
+    if (req.user?.role !== "admin" && req.user?.role !== "manager")
       return res.status(403).json({ success: false, message: "Only admins can remove expense types" });
 
     const type = await ExpenseType.findByIdAndUpdate(req.params.id, { isActive: false }, { new: true });
