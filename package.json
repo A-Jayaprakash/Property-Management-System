@@ -23,9 +23,17 @@
     "puh": "^1.0.0"
   },
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "build": "echo 'No build step required'"
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js",
+    "build": "echo 'No build step required'",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   },
   "engines": {
     "node": ">=18"
