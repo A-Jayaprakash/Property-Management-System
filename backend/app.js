@@ -17,6 +17,7 @@ const chargeRoutes      = require("./routes/chargeRoutes");
 const expenseTypeRoutes = require("./routes/expenseTypeRoutes");
 const billingRoutes     = require("./routes/billingRoutes");
 const expenseRoutes     = require("./routes/expenseRoutes");
+const reportRoutes      = require("./routes/reportRoutes");
 const { verifyToken } = require("./middlewares/authMiddleware");
 const authRoutes = require("./routes/authRoutes");
 
@@ -205,6 +206,7 @@ app.use("/api/charges",       verifyToken, chargeRoutes);
 app.use("/api/expense-types", verifyToken, expenseTypeRoutes);
 app.use("/api/billing",       verifyToken, billingRoutes);
 app.use("/api/expenses",      verifyToken, expenseRoutes);
+app.use("/api/reports",       verifyToken, reportRoutes);
 
 // Serve static files from frontend (optional: only if frontend is in this repo)
 // Serve static files from frontend

@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Financial Reports — PropertySync</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/home.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      /* ── Controls card ─────────────────────────────── */
+      .report-controls {
+        background: var(--card-bg,#fff);
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.08);
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .report-type-tabs {
+        display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1.1rem;
+      }
+      .report-tab {
+        padding: 8px 20px; border-radius: 25px; border: 2px solid #e0e0e0;
+        background: transparent; cursor: pointer; font-size: .88rem;
+        font-weight: 600; color: #666; transition: all .18s;
+      }
+      .report-tab.active, .report-tab:hover {
+        border-color: #667eea; background: #667eea; color: #fff;
+      }
+      .report-filters-row {
+        display: flex; align-items: center; gap: .75rem; flex-wrap: wrap;
+      }
+      .report-filters-row label { font-size: .82rem; color: #888; margin-right: .25rem; }
+      .report-filters-row select {
+        padding: 7px 12px; border: 1px solid #ddd; border-radius: 8px;
+        font-size: .9rem; min-width: 180px;
+      }
+      .range-group { display: flex; gap: 3px; margin-left: auto; }
+      .range-btn {
+        padding: 7px 14px; border: 1px solid #ddd; background: #f5f5f5;
+        border-radius: 6px; cursor: pointer; font-size: .85rem; font-weight: 600;
+        color: #555; transition: all .15s;
+      }
+      .range-btn.active { background: #667eea; border-color: #667eea; color: #fff; }
+      .range-btn:hover:not(.active) { background: #ebebeb; }
+
+      /* ── Hero gradient banner ──────────────────────── */
+      .report-hero {
+        background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+        border-radius: 12px; padding: 1.5rem 1.75rem;
+        color: #fff; margin-bottom: 1.5rem; display: none;
+        align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+      }
+      .report-hero h2 { margin: 0; font-size: 1.3rem; }
+      .report-hero p  { margin: .3rem 0 0; font-size: .88rem; opacity: .85; }
+      .report-hero .hero-range {
+        background: rgba(255,255,255,.2); border-radius: 20px;
+        padding: 5px 16px; font-size: .82rem; font-weight: 600;
+      }
+
+      /* ── KPI cards ─────────────────────────────────── */
+      .kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+        gap: 1rem; margin-bottom: 1.5rem;
+      }
+      .kpi-card {
+        border-radius: 12px; padding: 1.1rem 1.25rem;
+        display: flex; align-items: center; gap: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.08);
+        transition: transform .18s;
+      }
+      .kpi-card:hover { transform: translateY(-2px); }
+      .kpi-icon {
+        width: 44px; height: 44px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.15rem; flex-shrink: 0;
+      }
+      .kpi-value { font-size: 1.15rem; font-weight: 800; line-height: 1.2; }
+      .kpi-label { font-size: .73rem; opacity: .75; margin-top: 2px; text-transform: uppercase; letter-spacing: .05em; }
+
+      .kpi-revenue  { background: #eef0fd; color: #3949ab; }
+      .kpi-revenue  .kpi-icon { background: #667eea; color: #fff; }
+      .kpi-expenses { background: #fff3e0; color: #bf5000; }
+      .kpi-expenses .kpi-icon { background: #e67e22; color: #fff; }
+      .kpi-profit.pos  { background: #e8f5e9; color: #1b5e20; }
+      .kpi-profit.pos  .kpi-icon { background: #27ae60; color: #fff; }
+      .kpi-profit.neg  { background: #ffebee; color: #b71c1c; }
+      .kpi-profit.neg  .kpi-icon { background: #e53935; color: #fff; }
+      .kpi-margin   { background: #e0f7fa; color: #006064; }
+      .kpi-margin   .kpi-icon { background: #11998e; color: #fff; }
+      .kpi-occupancy{ background: #f3e5f5; color: #4a148c; }
+      .kpi-occupancy .kpi-icon { background: #8e24aa; color: #fff; }
+
+      /* ── Charts layout ─────────────────────────────── */
+      .charts-row {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 1.25rem; margin-bottom: 1.5rem;
+      }
+      @media (max-width: 860px) { .charts-row { grid-template-columns: 1fr; } }
+      .chart-card {
+        background: var(--card-bg,#fff); border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.07);
+        padding: 1.25rem 1.5rem;
+      }
+      .chart-card-title {
+        font-size: .88rem; font-weight: 700; color: #444;
+        margin-bottom: 1rem; display: flex; align-items: center; gap: .5rem;
+      }
+      .chart-card-title i { color: #667eea; }
+      .chart-legend {
+        display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: .75rem;
+      }
+      .legend-dot {
+        display: flex; align-items: center; gap: .35rem;
+        font-size: .78rem; color: #666;
+      }
+      .legend-dot span {
+        width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+      }
+      .chart-no-data {
+        text-align: center; color: #bbb; padding: 3rem 1rem;
+        font-size: .95rem;
+      }
+
+      /* ── Breakdown table ───────────────────────────── */
+      .breakdown-card {
+        background: var(--card-bg,#fff); border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.07);
+        overflow: hidden; margin-bottom: 1.5rem;
+      }
+      .breakdown-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #f0f0f0;
+        display: flex; align-items: center; gap: .5rem;
+        font-weight: 700; font-size: .95rem; color: #333;
+      }
+      .breakdown-header i { color: #667eea; }
+      .breakdown-table { width: 100%; border-collapse: collapse; font-size: .87rem; }
+      .breakdown-table th {
+        background: #f8f9fa; padding: 10px 16px; text-align: left;
+        font-weight: 600; font-size: .78rem; color: #777;
+        text-transform: uppercase; letter-spacing: .06em;
+        border-bottom: 1px solid #eee;
+      }
+      .breakdown-table td { padding: 11px 16px; border-bottom: 1px solid #f5f5f5; vertical-align: middle; }
+      .breakdown-table tr:last-child td { border-bottom: none; }
+      .breakdown-table tr:hover td { background: #fafafa; }
+      .profit-bar-wrap { display: flex; align-items: center; gap: .6rem; }
+      .profit-bar-track { flex: 1; height: 6px; background: #eee; border-radius: 3px; min-width: 60px; }
+      .profit-bar-fill  { height: 100%; border-radius: 3px; background: linear-gradient(90deg,#667eea,#764ba2); }
+      .profit-bar-fill.neg { background: linear-gradient(90deg,#e53935,#ef9a9a); }
+      .pill { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: .75rem; font-weight: 600; }
+      .pill-occupied { background: #e8f5e9; color: #2e7d32; }
+      .pill-vacant   { background: #fce4ec; color: #c62828; }
+      .pill-other    { background: #f5f5f5; color: #555; }
+
+      /* ── Empty / loading states ────────────────────── */
+      .report-empty {
+        text-align: center; padding: 4rem 2rem; color: #bbb;
+      }
+      .report-empty i { font-size: 3rem; display: block; margin-bottom: 1rem; }
+      .report-empty p { font-size: 1rem; margin: 0; }
+
+      /* ── Page title ────────────────────────────────── */
+      .page-title-row {
+        display: flex; align-items: center; gap: 1rem;
+        margin-bottom: 1.5rem; flex-wrap: wrap;
+      }
+      .page-title-row h1 { margin: 0; font-size: 1.5rem; }
+      .page-title-row p  { margin: 0; color: #888; font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Header ── -->
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo"><i class="fas fa-building"></i><span>PropertySync</span></div>
+          <div class="header-actions">
+            <a href="home.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main ── -->
+    <div class="main-content">
+      <div class="container">
+
+        <div class="page-title-row">
+          <div>
+            <h1><i class="fas fa-chart-line" style="color:#667eea;"></i> Financial Reports</h1>
+            <p>Revenue · Expenses · Profitability — across your entire portfolio</p>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="report-controls">
+          <div class="report-type-tabs">
+            <button class="report-tab active" data-type="overall"  onclick="setType('overall')">
+              <i class="fas fa-globe-asia"></i> Overall Portfolio
+            </button>
+            <button class="report-tab" data-type="property" onclick="setType('property')">
+              <i class="fas fa-building"></i> By Property
+            </button>
+            <button class="report-tab" data-type="unit" onclick="setType('unit')">
+              <i class="fas fa-home"></i> By Unit
+            </button>
+          </div>
+
+          <div class="report-filters-row">
+            <div id="propSel" style="display:none;">
+              <label>Property</label>
+              <select id="selProperty" onchange="onPropertyChange()">
+                <option value="">Select property…</option>
+              </select>
+            </div>
+            <div id="unitSel" style="display:none;">
+              <label>Unit</label>
+              <select id="selUnit">
+                <option value="">Select unit…</option>
+              </select>
+            </div>
+
+            <div class="range-group">
+              <button class="range-btn" onclick="setRange('1M')">1M</button>
+              <button class="range-btn active" onclick="setRange('6M')">6M</button>
+              <button class="range-btn" onclick="setRange('3M')">3M</button>
+              <button class="range-btn" onclick="setRange('1Y')">1Y</button>
+            </div>
+
+            <button class="btn btn-primary" onclick="generateReport()">
+              <i class="fas fa-chart-bar"></i> Generate Report
+            </button>
+          </div>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" style="display:none;padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:1rem;"></div>
+
+        <!-- Hero banner (shown after generate) -->
+        <div class="report-hero" id="heroBar">
+          <div>
+            <h2 id="heroTitle">Overall Portfolio</h2>
+            <p id="heroSub">Loading…</p>
+          </div>
+          <div class="hero-range" id="heroRange">6M</div>
+        </div>
+
+        <!-- KPI cards -->
+        <div class="kpi-grid" id="kpiGrid" style="display:none;">
+          <div class="kpi-card kpi-revenue">
+            <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+            <div><div class="kpi-value" id="kpiRev">₹ 0</div><div class="kpi-label">Total Revenue</div></div>
+          </div>
+          <div class="kpi-card kpi-expenses">
+            <div class="kpi-icon"><i class="fas fa-receipt"></i></div>
+            <div><div class="kpi-value" id="kpiExp">₹ 0</div><div class="kpi-label">Total Expenses</div></div>
+          </div>
+          <div class="kpi-card kpi-profit pos" id="kpiProfitCard">
+            <div class="kpi-icon"><i class="fas fa-chart-line"></i></div>
+            <div><div class="kpi-value" id="kpiPro">₹ 0</div><div class="kpi-label">Net Profit</div></div>
+          </div>
+          <div class="kpi-card kpi-margin">
+            <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+            <div><div class="kpi-value" id="kpiMar">0%</div><div class="kpi-label">Profit Margin</div></div>
+          </div>
+          <div class="kpi-card kpi-occupancy" id="kpiOccCard">
+            <div class="kpi-icon"><i class="fas fa-home"></i></div>
+            <div><div class="kpi-value" id="kpiOcc">0%</div><div class="kpi-label">Occupancy Rate</div></div>
+          </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row" id="chartsRow" style="display:none;">
+          <div class="chart-card">
+            <div class="chart-card-title">
+              <i class="fas fa-chart-bar"></i> Monthly Revenue vs Expenses vs Net Profit
+            </div>
+            <div class="chart-legend">
+              <div class="legend-dot"><span style="background:#667eea;"></span> Revenue</div>
+              <div class="legend-dot"><span style="background:#e67e22;"></span> Expenses</div>
+              <div class="legend-dot"><span style="background:#27ae60;border-radius:50%;"></span> Net Profit</div>
+            </div>
+            <canvas id="trendChart" style="max-height:280px;"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-card-title">
+              <i class="fas fa-chart-pie"></i> Expense Breakdown
+            </div>
+            <canvas id="pieChart" style="max-height:220px;" id="pieCanvas"></canvas>
+            <div id="pieNoData" class="chart-no-data" style="display:none;">
+              <i class="fas fa-inbox" style="font-size:1.5rem;display:block;margin-bottom:.5rem;"></i>
+              No expense data recorded
+            </div>
+          </div>
+        </div>
+
+        <!-- Breakdown table -->
+        <div class="breakdown-card" id="breakdownCard" style="display:none;">
+          <div class="breakdown-header" id="breakdownHeader">
+            <i class="fas fa-table"></i> <span id="breakdownTitle">Breakdown</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="breakdown-table" id="breakdownTable"></table>
+          </div>
+        </div>
+
+        <!-- Initial empty state -->
+        <div class="report-empty" id="emptyState">
+          <i class="fas fa-chart-line"></i>
+          <p>Choose a report type, time range, and click <strong>Generate Report</strong></p>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      // ── State ─────────────────────────────────────────────────────────────
+      const token = sessionStorage.getItem("authToken");
+      let reportType   = "overall";
+      let selectedRange = "6M";
+      let trendChartInst = null;
+      let pieChartInst   = null;
+      let propertiesList = [];
+
+      const RANGE_LABELS = { "1M": "Last 1 Month", "3M": "Last 3 Months", "6M": "Last 6 Months", "1Y": "Last 12 Months" };
+
+      // ── Auth ──────────────────────────────────────────────────────────────
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        location.href = "login.html";
+      }
+      function ah() { return { "Content-Type": "application/json", Authorization: `Bearer ${token}` }; }
+      function base() { return API_BASE_URL.replace(/\/$/, ""); }
+
+      function showMsg(msg, type = "error") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "warning" ? "#fff3cd" : "#f8d7da";
+        el.style.color      = type === "success" ? "#155724" : type === "warning" ? "#856404" : "#721c24";
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = "none"; }, 6000);
+      }
+
+      function inr(n) {
+        if (Math.abs(n) >= 100000) return "₹ " + (n / 100000).toFixed(1) + "L";
+        if (Math.abs(n) >= 1000)  return "₹ " + (n / 1000).toFixed(1)   + "K";
+        return "₹ " + Math.round(n).toLocaleString("en-IN");
+      }
+      function inrFull(n) { return "₹ " + Math.round(n).toLocaleString("en-IN"); }
+
+      // ── Tab & range controls ──────────────────────────────────────────────
+      function setType(type) {
+        reportType = type;
+        document.querySelectorAll(".report-tab").forEach(b => b.classList.toggle("active", b.dataset.type === type));
+        document.getElementById("propSel").style.display  = (type === "property" || type === "unit") ? "" : "none";
+        document.getElementById("unitSel").style.display  = (type === "unit") ? "" : "none";
+      }
+
+      function setRange(r) {
+        selectedRange = r;
+        document.querySelectorAll(".range-btn").forEach(b => b.classList.toggle("active", b.textContent === r));
+      }
+
+      async function onPropertyChange() {
+        const pid = document.getElementById("selProperty").value;
+        const uSel = document.getElementById("selUnit");
+        uSel.innerHTML = '<option value="">Select unit…</option>';
+        if (!pid || reportType !== "unit") return;
+        try {
+          const res  = await fetch(`${base()}/api/units/property/${pid}`, { headers: ah() });
+          const data = await res.json();
+          (data.units || []).forEach(u => {
+            const opt = document.createElement("option");
+            opt.value = u._id;
+            opt.textContent = `Unit ${u.unit_number}${u.floor !== undefined ? " · Floor " + u.floor : ""} · ${u.status}`;
+            uSel.appendChild(opt);
+          });
+        } catch (err) { showMsg("Could not load units: " + err.message); }
+      }
+
+      // ── Generate ──────────────────────────────────────────────────────────
+      async function generateReport() {
+        if (reportType === "property" && !document.getElementById("selProperty").value) {
+          showMsg("Please select a property.", "warning"); return;
+        }
+        if (reportType === "unit") {
+          if (!document.getElementById("selProperty").value) { showMsg("Please select a property.", "warning"); return; }
+          if (!document.getElementById("selUnit").value)     { showMsg("Please select a unit.", "warning"); return; }
+        }
+
+        hideResults();
+        document.getElementById("emptyState").innerHTML =
+          '<i class="fas fa-spinner fa-spin" style="font-size:2rem;"></i><p style="margin-top:.5rem;">Generating report…</p>';
+        document.getElementById("emptyState").style.display = "block";
+
+        try {
+          let url, data;
+          if (reportType === "overall") {
+            url  = `${base()}/api/reports/overall?range=${selectedRange}`;
+          } else if (reportType === "property") {
+            url  = `${base()}/api/reports/property/${document.getElementById("selProperty").value}?range=${selectedRange}`;
+          } else {
+            url  = `${base()}/api/reports/unit/${document.getElementById("selUnit").value}?range=${selectedRange}`;
+          }
+
+          const res = await fetch(url, { headers: ah() });
+          if (res.status === 401) { logout(); return; }
+          data = await res.json();
+          if (!data.success) throw new Error(data.message);
+
+          document.getElementById("emptyState").style.display = "none";
+          renderReport(data.data);
+        } catch (err) {
+          document.getElementById("emptyState").innerHTML =
+            `<i class="fas fa-exclamation-triangle" style="color:#e53935;"></i><p>${err.message}</p>`;
+          showMsg(err.message, "error");
+        }
+      }
+
+      function hideResults() {
+        ["heroBar","kpiGrid","chartsRow","breakdownCard"].forEach(id => {
+          document.getElementById(id).style.display = "none";
+        });
+      }
+
+      // ── Render ────────────────────────────────────────────────────────────
+      function renderReport(data) {
+        const sum = data.summary;
+
+        // Hero
+        const hero = document.getElementById("heroBar");
+        hero.style.display = "flex";
+        let heroTitle = "Overall Portfolio";
+        let heroSub   = `${propertiesList.length} properties · ${RANGE_LABELS[selectedRange]}`;
+        if (reportType === "property" && data.property) {
+          heroTitle = data.property.name;
+          heroSub   = `${data.property.type} · ${data.property.address} · ${RANGE_LABELS[selectedRange]}`;
+        } else if (reportType === "unit" && data.unit) {
+          heroTitle = `Unit ${data.unit.unit_number}`;
+          heroSub   = `${data.property?.name || ""} · ${data.unit.tenantName} · ${RANGE_LABELS[selectedRange]}`;
+        }
+        document.getElementById("heroTitle").textContent = heroTitle;
+        document.getElementById("heroSub").textContent   = heroSub;
+        document.getElementById("heroRange").textContent = RANGE_LABELS[selectedRange];
+
+        // KPIs
+        document.getElementById("kpiGrid").style.display = "";
+        document.getElementById("kpiRev").textContent = inr(sum.totalRevenue);
+        document.getElementById("kpiExp").textContent = inr(sum.totalExpenses);
+        document.getElementById("kpiPro").textContent = inr(sum.netProfit);
+        document.getElementById("kpiMar").textContent = sum.profitMargin + "%";
+
+        const profCard = document.getElementById("kpiProfitCard");
+        profCard.className = "kpi-card kpi-profit " + (sum.netProfit >= 0 ? "pos" : "neg");
+
+        if (sum.occupancyRate !== undefined) {
+          document.getElementById("kpiOcc").textContent = sum.occupancyRate + "%";
+          document.getElementById("kpiOccCard").style.display = "";
+        } else {
+          document.getElementById("kpiOccCard").style.display = "none";
+        }
+
+        // Charts
+        document.getElementById("chartsRow").style.display = "";
+        renderTrendChart(data.monthly || []);
+        renderPieChart(data.expenseBreakdown || []);
+
+        // Breakdown table
+        if (reportType === "overall" && data.properties?.length) {
+          renderPropertyTable(data.properties);
+        } else if (reportType === "property" && data.units?.length) {
+          renderUnitTable(data.units);
+        } else {
+          document.getElementById("breakdownCard").style.display = "none";
+        }
+      }
+
+      // ── Trend Chart ───────────────────────────────────────────────────────
+      function renderTrendChart(monthly) {
+        if (trendChartInst) { trendChartInst.destroy(); trendChartInst = null; }
+        const labels   = monthly.map(m => m.label);
+        const revenues = monthly.map(m => m.revenue);
+        const expenses = monthly.map(m => m.expenses);
+        const profits  = monthly.map(m => m.profit);
+
+        trendChartInst = new Chart(document.getElementById("trendChart"), {
+          data: {
+            labels,
+            datasets: [
+              {
+                type: "bar", label: "Revenue",
+                data: revenues,
+                backgroundColor: "rgba(102,126,234,0.75)",
+                borderRadius: 5, order: 2,
+              },
+              {
+                type: "bar", label: "Expenses",
+                data: expenses,
+                backgroundColor: "rgba(230,126,34,0.75)",
+                borderRadius: 5, order: 2,
+              },
+              {
+                type: "line", label: "Net Profit",
+                data: profits,
+                borderColor: "#27ae60",
+                backgroundColor: "rgba(39,174,96,0.1)",
+                borderWidth: 2.5, pointRadius: 4,
+                pointBackgroundColor: "#27ae60",
+                tension: 0.35, fill: true, order: 1,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            interaction: { mode: "index", intersect: false },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: ctx => ` ${ctx.dataset.label}: ${inrFull(ctx.parsed.y)}`,
+                },
+              },
+            },
+            scales: {
+              x: { grid: { display: false } },
+              y: {
+                ticks: {
+                  callback: v => inr(v),
+                },
+                grid: { color: "#f0f0f0" },
+              },
+            },
+          },
+        });
+      }
+
+      // ── Pie Chart ─────────────────────────────────────────────────────────
+      function renderPieChart(breakdown) {
+        if (pieChartInst) { pieChartInst.destroy(); pieChartInst = null; }
+        const canvas  = document.getElementById("pieChart");
+        const noData  = document.getElementById("pieNoData");
+
+        if (!breakdown || !breakdown.length) {
+          canvas.style.display = "none";
+          noData.style.display = "block";
+          return;
+        }
+        canvas.style.display = "";
+        noData.style.display = "none";
+
+        const PALETTE = [
+          "#667eea","#e67e22","#27ae60","#e53935","#8e24aa",
+          "#0097a7","#f9a825","#546e7a","#d81b60","#00897b",
+        ];
+
+        pieChartInst = new Chart(canvas, {
+          type: "doughnut",
+          data: {
+            labels: breakdown.map(b => b.name),
+            datasets: [{
+              data: breakdown.map(b => b.amount),
+              backgroundColor: breakdown.map((_, i) => PALETTE[i % PALETTE.length]),
+              borderWidth: 2, borderColor: "#fff",
+              hoverOffset: 8,
+            }],
+          },
+          options: {
+            responsive: true,
+            cutout: "62%",
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: { font: { size: 11 }, padding: 10, usePointStyle: true },
+              },
+              tooltip: {
+                callbacks: {
+                  label: ctx => ` ${ctx.label}: ${inrFull(ctx.parsed)}`,
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // ── Property breakdown table ──────────────────────────────────────────
+      function renderPropertyTable(properties) {
+        const card = document.getElementById("breakdownCard");
+        card.style.display = "";
+        document.getElementById("breakdownTitle").textContent = "Property-wise Breakdown";
+        document.getElementById("breakdownHeader").querySelector("i").className = "fas fa-building";
+
+        const maxProfit = Math.max(...properties.map(p => Math.abs(p.profit)), 1);
+
+        const rows = properties.map(p => {
+          const barPct  = Math.min(100, (Math.abs(p.profit) / maxProfit) * 100).toFixed(1);
+          const isNeg   = p.profit < 0;
+          const occPct  = p.unitCount > 0 ? ((p.occupiedUnits / p.unitCount) * 100).toFixed(0) : 0;
+          return `<tr>
+            <td style="font-weight:700;">${p.name}</td>
+            <td><span class="pill pill-other">${p.type}</span></td>
+            <td style="color:#3949ab;font-weight:600;">${inrFull(p.revenue)}</td>
+            <td style="color:#bf5000;font-weight:600;">${inrFull(p.expenses)}</td>
+            <td style="${isNeg ? "color:#c62828" : "color:#2e7d32"};font-weight:700;">
+              ${isNeg ? "−" : ""}${inrFull(Math.abs(p.profit))}
+            </td>
+            <td>
+              <div class="profit-bar-wrap">
+                <div class="profit-bar-track">
+                  <div class="profit-bar-fill ${isNeg ? "neg" : ""}" style="width:${barPct}%;"></div>
+                </div>
+                <span style="font-size:.78rem;color:#666;min-width:36px;">${p.profitMargin}%</span>
+              </div>
+            </td>
+            <td>
+              <span style="font-size:.82rem;">${p.occupiedUnits}/${p.unitCount}</span>
+              <div style="width:100%;height:5px;background:#eee;border-radius:3px;margin-top:3px;">
+                <div style="width:${occPct}%;height:100%;background:#8e24aa;border-radius:3px;"></div>
+              </div>
+            </td>
+          </tr>`;
+        }).join("");
+
+        document.getElementById("breakdownTable").innerHTML = `
+          <thead>
+            <tr>
+              <th>Property</th><th>Type</th>
+              <th>Revenue</th><th>Expenses</th><th>Net Profit</th>
+              <th>Margin</th><th>Occupancy</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>`;
+      }
+
+      // ── Unit breakdown table ──────────────────────────────────────────────
+      function renderUnitTable(units) {
+        const card = document.getElementById("breakdownCard");
+        card.style.display = "";
+        document.getElementById("breakdownTitle").textContent = "Unit-wise Breakdown";
+        document.getElementById("breakdownHeader").querySelector("i").className = "fas fa-home";
+
+        const maxProfit = Math.max(...units.map(u => Math.abs(u.profit)), 1);
+
+        const rows = units.map(u => {
+          const barPct = Math.min(100, (Math.abs(u.profit) / maxProfit) * 100).toFixed(1);
+          const isNeg  = u.profit < 0;
+          const pillCls = u.status === "occupied" ? "pill-occupied" : u.status === "available" ? "pill-vacant" : "pill-other";
+          return `<tr>
+            <td style="font-weight:700;">Unit ${u.unit_number}</td>
+            <td>Floor ${u.floor}</td>
+            <td>${u.type}</td>
+            <td><span class="pill ${pillCls}">${u.tenantName !== "Vacant" ? u.tenantName : "Vacant"}</span></td>
+            <td style="color:#3949ab;font-weight:600;">${inrFull(u.revenue)}</td>
+            <td style="color:#bf5000;font-weight:600;">${inrFull(u.expenses)}</td>
+            <td style="${isNeg ? "color:#c62828" : "color:#2e7d32"};font-weight:700;">
+              ${isNeg ? "−" : ""}${inrFull(Math.abs(u.profit))}
+            </td>
+            <td>
+              <div class="profit-bar-wrap">
+                <div class="profit-bar-track">
+                  <div class="profit-bar-fill ${isNeg ? "neg" : ""}" style="width:${barPct}%;"></div>
+                </div>
+                <span style="font-size:.78rem;color:#666;min-width:36px;">${u.profitMargin}%</span>
+              </div>
+            </td>
+          </tr>`;
+        }).join("");
+
+        document.getElementById("breakdownTable").innerHTML = `
+          <thead>
+            <tr>
+              <th>Unit</th><th>Floor</th><th>Type</th><th>Tenant</th>
+              <th>Revenue</th><th>Expenses</th><th>Net Profit</th><th>Margin</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>`;
+      }
+
+      // ── Init ──────────────────────────────────────────────────────────────
+      (async () => {
+        if (!token) { location.href = "login.html"; return; }
+        try {
+          const res  = await fetch(`${base()}/api/properties`, { headers: ah() });
+          if (res.status === 401) { logout(); return; }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+          // Properties controller returns a bare array, not wrapped in { data: [...] }
+          propertiesList = Array.isArray(data) ? data : (data.data || data.properties || []);
+          const pSel = document.getElementById("selProperty");
+          propertiesList.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p._id; opt.textContent = p.name;
+            pSel.appendChild(opt);
+          });
+        } catch (err) { showMsg("Could not load properties: " + err.message); }
+      })();
+    </script>
+  </body>
+</html>
