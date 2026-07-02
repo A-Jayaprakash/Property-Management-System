@@ -23,9 +23,20 @@
     "puh": "^1.0.0"
   },
   "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js",
-    "build": "echo 'No build step required'"
+    "start": "node backend/app.js",
+    "dev": "nodemon backend/app.js",
+    "build": "echo 'No build step required'",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "test:firefox": "playwright test --config=playwright.firefox.config.js",
+    "test:chromium": "playwright test --project=chromium",
+    "test:core": "playwright test --project=chromium tests/e2e/specs/01-auth.spec.js tests/e2e/specs/02-properties.spec.js tests/e2e/specs/03-units.spec.js tests/e2e/specs/04-tenants.spec.js tests/e2e/specs/05-billing.spec.js tests/e2e/specs/06-expenses.spec.js tests/e2e/specs/07-reports.spec.js tests/e2e/specs/08-config.spec.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1"
   },
   "engines": {
     "node": ">=18"

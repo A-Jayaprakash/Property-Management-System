@@ -34,3 +34,8 @@ pids/
 *.pid
 *.seed
 *.pid.lock
+
+# Playwright
+playwright-report/
+test-results/
+tests/e2e/.test-state.json
