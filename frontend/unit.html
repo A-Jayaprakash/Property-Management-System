@@ -134,9 +134,11 @@
             </div>
             <div class="form-group">
               <label for="property">Property *</label>
-              <select id="property" name="property" required>
+              <select id="property" name="property" required
+                onchange="checkPropertyCapacity(this.value)">
                 <option value="">Select Property</option>
               </select>
+              <small id="unitCapacityInfo" style="display:block;margin-top:4px;"></small>
             </div>
           </div>
 
@@ -205,88 +207,9 @@
           </div>
 
           <div class="form-group">
-            <label>Amenities</label>
-            <div class="checkbox-group">
-              <div class="checkbox-item">
-                <input type="checkbox" id="ac" name="amenities" value="AC" />
-                <label for="ac">AC</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="heating"
-                  name="amenities"
-                  value="Heating"
-                />
-                <label for="heating">Heating</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="balcony"
-                  name="amenities"
-                  value="Balcony"
-                />
-                <label for="balcony">Balcony</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="parking"
-                  name="amenities"
-                  value="Parking"
-                />
-                <label for="parking">Parking</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="furnished"
-                  name="amenities"
-                  value="Furnished"
-                />
-                <label for="furnished">Furnished</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="wifi"
-                  name="amenities"
-                  value="Wifi"
-                />
-                <label for="wifi">WiFi</label>
-              </div>
-              <div class="checkbox-item">
-                <input type="checkbox" id="gym" name="amenities" value="Gym" />
-                <label for="gym">Gym</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="pool"
-                  name="amenities"
-                  value="Pool"
-                />
-                <label for="pool">Pool</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="elevator"
-                  name="amenities"
-                  value="Elevator"
-                />
-                <label for="elevator">Elevator</label>
-              </div>
-              <div class="checkbox-item">
-                <input
-                  type="checkbox"
-                  id="security"
-                  name="amenities"
-                  value="Security"
-                />
-                <label for="security">Security</label>
-              </div>
+            <label>Unit Amenities <small style="color:#888;font-weight:normal;">(specific to this unit)</small></label>
+            <div id="unitAmenitiesContainer" class="checkbox-group">
+              <small style="color:#aaa;">Loading amenities…</small>
             </div>
           </div>
 
@@ -317,6 +240,8 @@
       let editingUnitId = null;
     </script>
     <script src="unit/config.js"></script>
+    <script src="unit/loadUnitAmenities.js"></script>
+    <script src="unit/checkPropertyCapacity.js"></script>
     <script src="unit/applyFilters.js"></script>
     <script src="unit/clearFilters.js"></script>
     <script src="unit/closeModal.js"></script>

@@ -24,6 +24,9 @@ async function openAddUnitModal() {
     // Populate dropdowns with fresh data
     populatePropertyDropdowns();
 
+    // Reset amenity checkboxes (uncheck all) for a clean add form
+    await loadUnitAmenities([]);
+
     // Show the modal
     document.getElementById("unitModal").style.display = "block";
 
@@ -43,4 +46,10 @@ function closeModal() {
   // Reset form
   document.getElementById("unitForm").reset();
   editingUnitId = null;
+
+  // Clear capacity info and re-enable Save button
+  const infoEl = document.getElementById("unitCapacityInfo");
+  if (infoEl) infoEl.textContent = "";
+  const saveBtn = document.querySelector('#unitForm button[type="submit"]');
+  if (saveBtn) { saveBtn.disabled = false; saveBtn.title = ""; }
 }

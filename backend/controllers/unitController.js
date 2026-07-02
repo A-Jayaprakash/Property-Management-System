@@ -3,6 +3,25 @@ const Property = require("../models/Property");
 const Tenant = require("../models/Tenant");
 const mongoose = require("mongoose");
 
+// Returns the list of property ObjectIds a manager owns, or null for admin/tenant (no restriction).
+const managerPropertyScope = async (user) => {
+  if (user.role !== "manager") return null;
+  const props = await Property.find({ createdBy: user.id }, "_id");
+  return props.map((p) => p._id);
+};
+
+// Applies manager scoping to a filter that has an optional `.property` field.
+// If the manager passes a specific property ID that they don't own, forces empty results.
+const applyPropertyScope = (filter, scope, requestedProperty) => {
+  if (scope === null) return; // admin / tenant — no restriction
+  if (requestedProperty) {
+    const owns = scope.some((id) => id.toString() === requestedProperty);
+    filter.property = owns ? requestedProperty : { $in: [] };
+  } else {
+    filter.property = { $in: scope };
+  }
+};
+
 // Create a new unit
 const createUnit = async (req, res) => {
   try {
@@ -43,6 +62,18 @@ const createUnit = async (req, res) => {
     if (!propertyExists) {
       return res.status(404).json({
         message: "Property not found",
+      });
+    }
+
+    // Enforce the property's unit cap
+    const existingUnitCount = await Unit.countDocuments({
+      property: propertyExists._id,
+      is_active: true,
+    });
+
+    if (existingUnitCount >= propertyExists.unitCount) {
+      return res.status(400).json({
+        message: `Unit limit reached. "${propertyExists.name}" is configured for ${propertyExists.unitCount} unit${propertyExists.unitCount !== 1 ? "s" : ""} and already has ${existingUnitCount}. Update the property's unit count if you need more.`,
       });
     }
 
@@ -115,7 +146,6 @@ const getAllUnits = async (req, res) => {
     // Build filter object
     const filter = { is_active: true };
 
-    if (property) filter.property = property;
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (floor) filter.floor = floor;
@@ -127,6 +157,10 @@ const getAllUnits = async (req, res) => {
       if (min_rent) filter.rent.$gte = Number(min_rent);
       if (max_rent) filter.rent.$lte = Number(max_rent);
     }
+
+    // Scope to manager's own properties; admin/tenant see all
+    const scope = await managerPropertyScope(req.user);
+    applyPropertyScope(filter, scope, property);
 
     // Calculate pagination
     const skip = (page - 1) * limit;
@@ -291,9 +325,15 @@ const getUnitsByProperty = async (req, res) => {
     // Check if property exists
     const property = await Property.findById(propertyId);
     if (!property) {
-      return res.status(404).json({
-        message: "Property not found",
-      });
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    // Managers can only view units of their own properties
+    if (
+      req.user.role === "manager" &&
+      property.createdBy.toString() !== req.user.id
+    ) {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     const units = await Unit.getUnitsByProperty(propertyId);
@@ -320,10 +360,10 @@ const getAvailableUnits = async (req, res) => {
   try {
     const { property } = req.query;
 
-    let query = { status: "available", is_active: true };
-    if (property) {
-      query.property = property;
-    }
+    const query = { status: "available", is_active: true };
+
+    const scope = await managerPropertyScope(req.user);
+    applyPropertyScope(query, scope, property);
 
     const units = await Unit.find(query)
       .populate("property", "name address type")
@@ -492,7 +532,6 @@ const searchUnits = async (req, res) => {
     };
 
     // Additional filters
-    if (property) filter.property = property;
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (min_rent || max_rent) {
@@ -500,6 +539,9 @@ const searchUnits = async (req, res) => {
       if (min_rent) filter.rent.$gte = Number(min_rent);
       if (max_rent) filter.rent.$lte = Number(max_rent);
     }
+
+    const scope = await managerPropertyScope(req.user);
+    applyPropertyScope(filter, scope, property);
 
     const units = await Unit.find(filter)
       .populate("property", "name address type")

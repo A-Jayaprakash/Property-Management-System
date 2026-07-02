@@ -3,7 +3,7 @@ services:
     name: property-management-system
     env: node
     buildCommand: npm install
-    startCommand: npm start
+    startCommand: node backend/app.js
     envVars:
       - key: NODE_ENV
         value: production

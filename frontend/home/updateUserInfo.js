@@ -19,4 +19,20 @@ function updateUserInfo() {
 
   // Update role
   userRole.textContent = (user.role || "tenant").toUpperCase();
+
+  // Show admin/manager cards and quick actions
+  if (user.role === "admin" || user.role === "manager") {
+    const amenitiesCard = document.getElementById("amenitiesCard");
+    if (amenitiesCard) amenitiesCard.style.display = "";
+    const amenitiesQuickAction = document.getElementById("amenitiesQuickAction");
+    if (amenitiesQuickAction) amenitiesQuickAction.style.display = "";
+    const chargesCard = document.getElementById("chargesCard");
+    if (chargesCard) chargesCard.style.display = "";
+    const chargesQuickAction = document.getElementById("chargesQuickAction");
+    if (chargesQuickAction) chargesQuickAction.style.display = "";
+    const reportsCard = document.getElementById("reportsCard");
+    if (reportsCard) reportsCard.style.display = "";
+    const reportsQuickAction = document.getElementById("reportsQuickAction");
+    if (reportsQuickAction) reportsQuickAction.style.display = "";
+  }
 }

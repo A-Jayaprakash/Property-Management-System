@@ -261,6 +261,36 @@
       </div>
     </div>
 
+    <!-- Reactivate Tenant Modal -->
+    <div id="reactivateModal" class="modal">
+      <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header">
+          <h2 class="modal-title">
+            <i class="fas fa-power-off" style="color:#28a745;margin-right:8px;"></i>
+            Reactivate Tenant
+          </h2>
+          <button class="close-btn" onclick="closeReactivateModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p id="reactivateInfo" style="margin-bottom:16px;color:#555;"></p>
+          <div class="form-group">
+            <label class="form-label">Assign to Available Unit *</label>
+            <select id="reactivateUnitSelect" class="form-input">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeReactivateModal()">
+              Cancel
+            </button>
+            <button type="button" id="confirmReactivateBtn" class="btn btn-success" onclick="confirmReactivate()">
+              <i class="fas fa-check"></i> Reactivate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Notification -->
     <div id="notification" class="notification">
       <span id="notificationText"></span>
@@ -297,6 +327,7 @@
     <script src="tenant/openModal.js"></script>
     <script src="tenant/populateForm.js"></script>
     <script src="tenant/populatePropertySelect.js"></script>
+    <script src="tenant/reactivateTenant.js"></script>
     <script src="tenant/relocateTenant.js"></script>
     <script src="tenant/renderTenants.js"></script>
     <script src="tenant/saveTenant.js"></script>

@@ -1,5 +1,5 @@
 // Edit unit
-function editUnit(unitId) {
+async function editUnit(unitId) {
   const unit = units.find((u) => u._id === unitId);
   if (!unit) return;
   console.log("UNIT ID:", unitId);
@@ -18,13 +18,8 @@ function editUnit(unitId) {
   document.getElementById("maintenance_fee").value = unit.maintenance_fee || 0;
   document.getElementById("description").value = unit.description || "";
 
-  // Set amenities
-  const amenityCheckboxes = document.querySelectorAll(
-    'input[name="amenities"]'
-  );
-  amenityCheckboxes.forEach((checkbox) => {
-    checkbox.checked = unit.amenities?.includes(checkbox.value) || false;
-  });
+  // Re-render amenity checkboxes with this unit's saved values pre-checked
+  await loadUnitAmenities(unit.amenities || []);
 
   document.getElementById("unitModal").style.display = "block";
 }

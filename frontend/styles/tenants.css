@@ -466,12 +466,16 @@
   color: white;
   font-weight: 500;
   z-index: 1001;
-  transform: translateX(100%);
-  transition: transform 0.3s ease;
+  opacity: 0;
+  transform: translateX(calc(100% + 20px));
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
 }
 
 .notification.show {
+  opacity: 1;
   transform: translateX(0);
+  pointer-events: auto;
 }
 
 .notification.success {

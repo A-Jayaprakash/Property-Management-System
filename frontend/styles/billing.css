@@ -1,0 +1,265 @@
+/* ── Billing page layout ── */
+.billing-header-bar {
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.billing-header-bar h2 { margin: 0; font-size: 1.2rem; flex: 1; }
+.period-selector { display: flex; align-items: center; gap: .5rem; }
+.period-selector select, .period-selector input {
+  padding: 7px 10px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 8px;
+  font-size: .92rem;
+}
+.period-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: .82rem;
+}
+.period-status.draft     { background: #fff3cd; color: #856404; }
+.period-status.published { background: #d4edda; color: #155724; }
+.period-status.finalized { background: #d4edda; color: #155724; }
+
+/* ── Action buttons bar ── */
+.bill-actions { display: flex; gap: .6rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
+
+/* ── Unit bill card ── */
+.unit-bill-card {
+  background: var(--card-bg, #fff);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  margin-bottom: 1.1rem;
+  overflow: hidden;
+}
+.unit-bill-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: .85rem 1.2rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+.unit-bill-header .unit-title { font-weight: 700; font-size: 1rem; }
+.unit-bill-header .unit-meta  { font-size: .82rem; opacity: .88; margin-top: 2px; }
+.unit-bill-header .unit-total { font-size: 1rem; font-weight: 700; }
+.unit-bill-body { padding: 1.1rem 1.2rem; }
+
+/* ── Bill table ── */
+.bill-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.bill-table th {
+  background: #f1f3f4;
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 600;
+  font-size: .82rem;
+  color: #555;
+  border-bottom: 1px solid #e0e0e0;
+}
+.bill-table td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+.bill-table tr:last-child td { border-bottom: none; }
+.bill-table input[type="number"] {
+  width: 90px;
+  padding: 5px 7px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: .88rem;
+  text-align: right;
+}
+.bill-table input[type="number"]:focus { outline: 2px solid #667eea; border-color: #667eea; }
+.bill-table input[readonly] { background: #f5f5f5; color: #888; cursor: not-allowed; }
+.computed-val { font-weight: 600; color: #333; }
+.row-rent td { background: #fffde7; }
+.row-total td { background: #e8f5e9; font-weight: 700; font-size: .95rem; }
+.row-section-head td { background: #f8f9fa; font-weight: 600; font-size: .82rem; color: #667eea; letter-spacing: .04em; padding: 6px 10px; }
+
+/* ── Billing spreadsheet grid ── */
+.billing-section-label {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  font-weight: 700;
+  font-size: .9rem;
+  color: #444;
+  margin: 1.25rem 0 .45rem;
+}
+.billing-section-label small { font-weight: 400; color: #999; margin-left: .2rem; }
+
+.billing-grid-wrapper {
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.08);
+}
+
+.billing-grid {
+  border-collapse: collapse;
+  min-width: 100%;
+  font-size: .84rem;
+  background: #fff;
+}
+
+.billing-grid th,
+.billing-grid td {
+  border: 1px solid #e0e0e0;
+  padding: 5px 8px;
+  white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.billing-grid th {
+  background: #f1f3f4;
+  font-weight: 600;
+  font-size: .77rem;
+  color: #555;
+}
+
+/* Column header color classes */
+.grid-charge-hd   { background: #e8eaf6; color: #3949ab; }
+.col-calc-hd      { background: #fff9c4; color: #795548; }
+.col-owner-hd     { background: #ffe0cc; color: #bf5000; }
+.col-owner-sub-hd { background: #fff3e8; color: #bf5000; font-size: .75rem; }
+.col-unit-hd      { background: #eceff1; color: #37474f; min-width: 120px; text-align: left; }
+.col-total-hd     { background: #c8e6c9; color: #1b5e20; }
+
+/* Cell background tints */
+.col-calculated { background: #fffde7; }
+.col-owner-exp  { background: #fff8f2; }
+.col-total      { background: #e8f5e9; }
+.col-unit       { background: #fafafa; text-align: left; }
+
+/* Inputs inside grid cells */
+.billing-grid input[type="number"],
+.billing-grid input[type="text"] {
+  border: none;
+  width: 80px;
+  padding: 3px 5px;
+  text-align: right;
+  background: transparent;
+  font-size: .84rem;
+  outline: none;
+  font-family: inherit;
+}
+.billing-grid input[type="text"] { text-align: left; width: 100px; }
+.billing-grid input:focus { background: #fff9e6; outline: 1px solid #667eea; border-radius: 3px; }
+.billing-grid input[readonly] { color: #555; }
+.col-calculated input[type="number"] { color: #5d4037; font-weight: 600; }
+.col-total      input[type="number"] { color: #1b5e20; font-weight: 700; font-size: .88rem; width: 90px; }
+
+/* Unit cell content */
+.unit-label  { font-weight: 700; font-size: .88rem; }
+.unit-tenant { font-size: .73rem; color: #888; margin-top: 1px; }
+
+/* Property charges grid — row-per-charge layout */
+.prop-charges-grid .prop-charge-name { text-align: left; font-weight: 600; color: #3949ab; min-width: 140px; }
+.prop-charges-grid .prop-rate-cell   { color: #555; font-size: .82rem; }
+
+/* Badge */
+.charge-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.badge-reading { background: #d1ecf1; color: #0c5460; }
+.badge-usage   { background: #fff3cd; color: #856404; }
+.badge-normal  { background: #e2e3e5; color: #383d41; }
+
+/* Empty/loading states */
+.billing-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #aaa;
+  font-size: 1.05rem;
+}
+
+/* ── PRINT STYLES ── */
+#printSection { display: none; }
+
+@media print {
+  .header,
+  .main-content,
+  script { display: none !important; }
+  #printSection {
+    display: block !important;
+    margin: 0;
+    padding: 0;
+  }
+
+  .print-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 8mm 6mm;
+    box-sizing: border-box;
+    page-break-after: always;
+  }
+
+  /* 3 slips per row */
+  .slip-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4mm;
+  }
+
+  .bill-slip {
+    border: 1px solid #333;
+    border-radius: 3px;
+    padding: 4mm 4mm 3mm;
+    font-size: 8pt;
+    page-break-inside: avoid;
+  }
+
+  .slip-header {
+    border-bottom: 1.5px solid #333;
+    padding-bottom: 2mm;
+    margin-bottom: 2mm;
+  }
+  .slip-header .prop-name { font-size: 10pt; font-weight: 700; }
+  .slip-header .period-label { font-size: 7.5pt; color: #555; }
+
+  .slip-tenant-row { margin-bottom: 2mm; }
+  .slip-tenant-row .unit-no { font-weight: 700; font-size: 9pt; }
+  .slip-tenant-row .tenant-name { color: #333; }
+
+  .slip-table { width: 100%; border-collapse: collapse; margin-bottom: 2mm; }
+  .slip-table th { background: #e0e0e0; font-weight: 700; padding: 1.5mm 2mm; text-align: left; font-size: 7.5pt; }
+  .slip-table td { padding: 1mm 2mm; border-bottom: 0.5px solid #eee; font-size: 7.5pt; }
+  .slip-table .amount-col { text-align: right; }
+
+  .slip-total {
+    border-top: 1.5px solid #333;
+    padding-top: 1.5mm;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 9pt;
+  }
+
+  .slip-footer {
+    font-size: 6.5pt;
+    color: #888;
+    text-align: center;
+    margin-top: 2mm;
+    border-top: 0.5px dashed #ccc;
+    padding-top: 1.5mm;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+}

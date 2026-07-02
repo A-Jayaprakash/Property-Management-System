@@ -1,15 +1,20 @@
 // Render tenants
 function renderTenants() {
   const tenantGrid = document.getElementById("tenantGrid");
+  const emptyState  = document.getElementById("emptyState");
   const startIndex = (currentPage - 1) * tenantsPerPage;
   const endIndex = startIndex + tenantsPerPage;
   const currentTenants = filteredTenants.slice(startIndex, endIndex);
 
   if (currentTenants.length === 0) {
-    tenantGrid.innerHTML =
-      '<div class="empty-state"><i class="fas fa-search"></i><h3>No tenants found</h3><p>Try adjusting your search or filter criteria.</p></div>';
+    tenantGrid.style.display = "none";
+    emptyState.style.display = "block";
+    tenantGrid.innerHTML = "";
     return;
   }
+
+  emptyState.style.display = "none";
+  tenantGrid.style.display = "grid";
 
   tenantGrid.innerHTML = currentTenants
     .map(
@@ -65,6 +70,14 @@ function renderTenants() {
                 <i class="fas fa-edit"></i>
                 Edit
               </button>
+              ${tenant.status === "Inactive" ? `
+              <button class="action-btn btn-success" onclick="reactivateTenant('${
+                tenant._id || tenant.id
+              }')">
+                <i class="fas fa-power-off"></i>
+                Reactivate
+              </button>
+              ` : `
               <button class="action-btn btn-success" onclick="extendLease('${
                 tenant._id || tenant.id
               }')">
@@ -80,9 +93,10 @@ function renderTenants() {
               <button class="action-btn btn-danger" onclick="deleteTenant('${
                 tenant._id || tenant.id
               }')">
-                <i class="fas fa-trash"></i>
-                Remove
+                <i class="fas fa-power-off"></i>
+                Deactivate
               </button>
+              `}
             </div>
           </div>
         `

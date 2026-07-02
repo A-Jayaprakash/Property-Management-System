@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monthly Bill — PropertySync</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/home.css" />
+    <link rel="stylesheet" href="styles/billing.css" />
+  </head>
+  <body>
+    <!-- ── Header ── -->
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Properties
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Print section (hidden during screen, shown on print) ── -->
+    <div id="printSection"></div>
+
+    <!-- ── Main content ── -->
+    <div class="main-content">
+      <div class="container">
+
+        <!-- Period selector bar -->
+        <div class="billing-header-bar">
+          <div>
+            <h2 id="billingTitle"><i class="fas fa-file-invoice"></i> Monthly Bill</h2>
+            <div style="font-size:.85rem;color:#888;" id="billingSubtitle">Select a month and load the bill</div>
+          </div>
+          <div class="period-selector">
+            <select id="selMonth">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <input type="number" id="selYear" value="2026" min="2020" max="2099" style="width:80px;" />
+            <button class="btn btn-primary" onclick="loadBill()">
+              <i class="fas fa-folder-open"></i> Load Bill
+            </button>
+          </div>
+          <div id="periodStatusBadge" style="display:none;"></div>
+        </div>
+
+        <!-- Action buttons (shown after period loaded) -->
+        <div class="bill-actions" id="billActions" style="display:none;">
+          <button class="btn btn-primary" id="btnSave" onclick="saveDraft()">
+            <i class="fas fa-save"></i> Save Draft
+          </button>
+          <button class="btn btn-success" id="btnPublish" onclick="confirmPublish()">
+            <i class="fas fa-lock"></i> Publish
+          </button>
+          <button class="btn btn-secondary" onclick="printBill()">
+            <i class="fas fa-print"></i> Print Slips
+          </button>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" style="display:none;padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:1rem;"></div>
+
+        <!-- Billing grids rendered here -->
+        <div id="unitCards">
+          <div class="billing-empty">
+            <i class="fas fa-calendar-alt" style="font-size:2.5rem;margin-bottom:.75rem;color:#ddd;display:block;"></i>
+            Select a month and year, then click <strong>Load Bill</strong> to begin.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      // ── Globals ────────────────────────────────────────────────────────────
+      const token        = sessionStorage.getItem("authToken");
+      const params       = new URLSearchParams(window.location.search);
+      const propertyId   = params.get("propertyId");
+      const propertyName = decodeURIComponent(params.get("name") || "Property");
+
+      let periodId     = null;
+      let periodStatus = null;
+      let units        = [];
+      let unitCharges  = [];
+      let propCharges  = [];
+      let expenseTypes = [];
+      let prevReadings = {};
+
+      const MONTHS = ["","January","February","March","April","May","June",
+                       "July","August","September","October","November","December"];
+
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        window.location.href = "login.html";
+      }
+      function authHeaders() {
+        return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+      }
+      function base() { return API_BASE_URL.replace(/\/$/, ""); }
+      function showMsg(msg, type = "success") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "error" ? "#f8d7da" : "#fff3cd";
+        el.style.color      = type === "success" ? "#155724" : type === "error" ? "#721c24" : "#856404";
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = "none"; }, 5000);
+      }
+      function fmt(n) { return Number(n || 0).toFixed(2); }
+      function num(n) { return Number(n) || 0; }
+
+      // ── Init ───────────────────────────────────────────────────────────────
+      (async () => {
+        if (!token) { window.location.href = "login.html"; return; }
+        if (!propertyId) { showMsg("No property selected.", "error"); return; }
+        document.getElementById("billingTitle").innerHTML =
+          `<i class="fas fa-file-invoice"></i> Monthly Bill — ${propertyName}`;
+        document.title = `Monthly Bill — ${propertyName}`;
+        const now = new Date();
+        document.getElementById("selMonth").value = now.getMonth() + 1;
+        document.getElementById("selYear").value  = now.getFullYear();
+        try {
+          await Promise.all([loadCharges(), loadExpenseTypes()]);
+        } catch (e) {
+          showMsg("Failed to load configuration: " + e.message, "error");
+        }
+      })();
+
+      async function loadCharges() {
+        const res  = await fetch(`${base()}/api/charges?all=false`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        unitCharges = (data.data || []).filter(c => c.level === "unit"     && c.isActive);
+        propCharges = (data.data || []).filter(c => c.level === "property" && c.isActive);
+      }
+
+      async function loadExpenseTypes() {
+        const res  = await fetch(`${base()}/api/expense-types?level=unit`, { headers: authHeaders() });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message);
+        expenseTypes = data.data || [];
+      }
+
+      // ── Load Bill ──────────────────────────────────────────────────────────
+      async function loadBill() {
+        const month = parseInt(document.getElementById("selMonth").value);
+        const year  = parseInt(document.getElementById("selYear").value);
+
+        document.getElementById("unitCards").innerHTML =
+          `<div class="billing-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>`;
+        document.getElementById("billActions").style.display = "none";
+        document.getElementById("periodStatusBadge").style.display = "none";
+
+        const btnSave    = document.getElementById("btnSave");
+        const btnPublish = document.getElementById("btnPublish");
+        btnSave.disabled     = false;
+        btnSave.innerHTML    = '<i class="fas fa-save"></i> Save Draft';
+        btnPublish.disabled  = false;
+        btnPublish.innerHTML = '<i class="fas fa-lock"></i> Publish';
+
+        try {
+          const pRes  = await fetch(`${base()}/api/billing/periods`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ propertyId, month, year }),
+          });
+          const pData = await pRes.json();
+          if (!pData.success) throw new Error(pData.message);
+          periodId     = pData.data._id;
+          periodStatus = pData.data.status;
+
+          const uRes  = await fetch(`${base()}/api/units/property/${propertyId}`, { headers: authHeaders() });
+          const uData = await uRes.json();
+          if (!uData.units) throw new Error(uData.message || "Failed to load units");
+          units = uData.units || [];
+
+          const bRes  = await fetch(`${base()}/api/billing/periods/${periodId}`, { headers: authHeaders() });
+          const bData = await bRes.json();
+          const existingBills = bData.success ? (bData.data.bills || []) : [];
+
+          const rRes  = await fetch(
+            `${base()}/api/billing/previous-readings?propertyId=${propertyId}&month=${month}&year=${year}`,
+            { headers: authHeaders() }
+          );
+          const rData = await rRes.json();
+          prevReadings = rData.success ? (rData.data || {}) : {};
+
+          renderPeriodStatus(month, year);
+          renderBillingGrid(existingBills);
+          document.getElementById("billActions").style.display = "flex";
+
+          if (periodStatus === "published") {
+            document.getElementById("btnSave").disabled    = true;
+            document.getElementById("btnPublish").disabled = true;
+            showMsg("This period is published and locked. You can print slips.", "warning");
+          }
+        } catch (err) {
+          document.getElementById("unitCards").innerHTML =
+            `<div class="billing-empty" style="color:#c00;"><i class="fas fa-exclamation-triangle"></i> ${err.message}</div>`;
+          showMsg(err.message, "error");
+        }
+      }
+
+      function renderPeriodStatus(month, year) {
+        const badge = document.getElementById("periodStatusBadge");
+        badge.style.display = "inline-flex";
+        badge.className = `period-status ${periodStatus}`;
+        const icon = periodStatus === "published" ? "fa-lock" : "fa-pencil-alt";
+        badge.innerHTML = `<i class="fas ${icon}"></i> ${periodStatus === "published" ? "Published" : "Draft"} — ${MONTHS[month]} ${year}`;
+        document.getElementById("billingSubtitle").textContent =
+          `${MONTHS[month]} ${year} · ${units.length} unit(s)`;
+      }
+
+      // ── Render spreadsheet grid ────────────────────────────────────────────
+      function renderBillingGrid(existingBills) {
+        const container = document.getElementById("unitCards");
+
+        if (!units.length) {
+          container.innerHTML = `<div class="billing-empty">No active units found for this property.</div>`;
+          return;
+        }
+
+        const billMap = {};
+        existingBills.forEach(b => { billMap[b.unitId?._id || b.unitId] = b; });
+        const isLocked = periodStatus === "published";
+
+        // ── Property-Level Charges Table (one row per charge) ───────────────
+        let propSection = "";
+        if (propCharges.length) {
+          // Pull saved values from the first bill that has them
+          const propLineMap = {};
+          for (const b of existingBills) {
+            (b.lineItems || []).forEach(li => { propLineMap[li.chargeId] = li; });
+            if (Object.keys(propLineMap).length) break;
+          }
+
+          const propRows = propCharges.map(ch => {
+            const li      = propLineMap[ch._id] || {};
+            const prevVal = li.prevReading ?? prevReadings[`_prop_${ch._id}`] ?? "";
+            const typeCls = ch.chargeType === "Reading" ? "badge-reading"
+                          : ch.chargeType === "Usage"   ? "badge-usage" : "badge-normal";
+
+            let inputCells = "";
+            if (ch.chargeType === "Reading") {
+              inputCells = `
+                <td>${prevVal !== "" ? prevVal : "—"}</td>
+                <td><input type="number" id="prop_curr_${ch._id}" value="${li.currReading ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="onPropReadingChange('${ch._id}',${ch.rate ?? 0})" />
+                    <input type="hidden" id="prop_prev_${ch._id}" value="${prevVal}" /></td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td class="col-calculated">
+                  <input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else if (ch.chargeType === "Usage") {
+              inputCells = `
+                <td>—</td>
+                <td><input type="number" id="prop_units_${ch._id}" value="${li.units ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="onPropUsageChange('${ch._id}',${ch.rate ?? 0})" /></td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td class="col-calculated">
+                  <input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else {
+              inputCells = `
+                <td>—</td>
+                <td>—</td>
+                <td class="prop-rate-cell">${ch.rate ?? 0}</td>
+                <td><input type="number" id="prop_amt_${ch._id}" value="${li.amount ?? ''}"
+                      min="0" step="0.01" ${isLocked ? "readonly" : ""}
+                      oninput="recalcAllTotals()" /></td>`;
+            }
+
+            return `<tr>
+              <td class="prop-charge-name">${ch.name}</td>
+              <td><span class="charge-type-badge ${typeCls}">${ch.chargeType}</span></td>
+              ${inputCells}
+            </tr>`;
+          }).join("");
+
+          propSection = `
+            <div class="billing-section-label">
+              <i class="fas fa-building"></i> Property-Level Charges
+              <small>(entered once — included in every unit's total)</small>
+            </div>
+            <div class="billing-grid-wrapper">
+              <table class="billing-grid prop-charges-grid">
+                <thead>
+                  <tr>
+                    <th class="col-unit-hd">Charge</th>
+                    <th>Type</th>
+                    <th>Prev Reading</th>
+                    <th>Curr Reading / Units</th>
+                    <th>Rate</th>
+                    <th class="col-calc-hd">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>${propRows}</tbody>
+              </table>
+            </div>`;
+        }
+
+        // ── Unit-Level Charges Table ──────────────────────────────────────────
+        // owner expense columns = one per expense type + Misc Name + Misc Amt
+        const ownerColCount = expenseTypes.length + 2;
+
+        // Build two-row header
+        // Normal charges use rowspan=2; Reading/Usage use colspan=2 + sub-row entries
+        let uh1 = `<th rowspan="2" class="col-unit-hd">Unit</th>
+                   <th rowspan="2" class="grid-charge-hd">Rent (₹)</th>`;
+        let uh2 = ``;
+
+        unitCharges.forEach(ch => {
+          if (ch.chargeType === "Reading") {
+            uh1 += `<th colspan="2" class="grid-charge-hd">${ch.name}</th>`;
+            uh2 += `<th>Curr Reading</th><th class="col-calc-hd">Amount (₹)</th>`;
+          } else if (ch.chargeType === "Usage") {
+            uh1 += `<th colspan="2" class="grid-charge-hd">${ch.name}</th>`;
+            uh2 += `<th>Units</th><th class="col-calc-hd">Amount (₹)</th>`;
+          } else {
+            uh1 += `<th rowspan="2" class="grid-charge-hd">${ch.name} (₹)</th>`;
+          }
+        });
+
+        // Owner expenses group header
+        uh1 += `<th colspan="${ownerColCount}" class="col-owner-hd">
+                  <i class="fas fa-wallet"></i> Owner Expenses
+                  <small style="font-weight:400;">(not billed to tenant)</small>
+                </th>`;
+        expenseTypes.forEach(et => {
+          uh2 += `<th class="col-owner-sub-hd">${et.name} (₹)</th>`;
+        });
+        uh2 += `<th class="col-owner-sub-hd">Misc Name</th>
+                <th class="col-owner-sub-hd">Misc (₹)</th>`;
+
+        uh1 += `<th rowspan="2" class="col-total-hd">Total Rent (₹)</th>`;
+
+        // Build unit rows
+        const uRows = units.map(unit => {
+          const existing = billMap[unit._id] || {};
+          const lineMap  = {};
+          (existing.lineItems || []).forEach(li => { lineMap[li.chargeId] = li; });
+
+          const miscMap  = {};
+          let miscFree   = {};
+          (existing.miscItems || []).forEach(m => {
+            if (m.expenseTypeId) miscMap[String(m.expenseTypeId)] = m;
+            else miscFree = m;
+          });
+
+          const tenantLabel = unit.current_tenant?.fullName || "Vacant";
+          const totalVal    = existing.totalAmount ? fmt(existing.totalAmount) : "0.00";
+
+          let cols = `<td class="col-unit">
+            <div class="unit-label">Unit ${unit.unit_number}</div>
+            <div class="unit-tenant">${tenantLabel}</div>
+          </td>`;
+
+          // Rent
+          cols += `<td><input type="number" id="rent_${unit._id}"
+            value="${existing.rentAmount ?? unit.rent ?? ''}"
+            min="0" step="0.01" ${isLocked ? "readonly" : ""}
+            oninput="recalcTotal('${unit._id}')" /></td>`;
+
+          // Unit-level charge columns
+          unitCharges.forEach(ch => {
+            const li      = lineMap[ch._id] || {};
+            const prevKey = `${unit._id}_${ch._id}`;
+            const prevVal = prevReadings[prevKey] ?? li.prevReading ?? "";
+
+            if (ch.chargeType === "Reading") {
+              cols += `<td>
+                  <input type="number" id="curr_${unit._id}_${ch._id}"
+                    value="${li.currReading ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    title="Previous reading: ${prevVal !== "" ? prevVal : "N/A"}"
+                    oninput="onReadingChange('${unit._id}','${ch._id}',${ch.rate ?? 0})" />
+                  <input type="hidden" id="prev_${unit._id}_${ch._id}" value="${prevVal}" />
+                </td>
+                <td class="col-calculated">
+                  <input type="number" id="amt_${unit._id}_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else if (ch.chargeType === "Usage") {
+              cols += `<td>
+                  <input type="number" id="units_${unit._id}_${ch._id}"
+                    value="${li.units ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    oninput="onUsageChange('${unit._id}','${ch._id}',${ch.rate ?? 0})" />
+                </td>
+                <td class="col-calculated">
+                  <input type="number" id="amt_${unit._id}_${ch._id}" value="${li.amount ?? ''}" readonly />
+                </td>`;
+            } else {
+              cols += `<td>
+                  <input type="number" id="amt_${unit._id}_${ch._id}"
+                    value="${li.amount ?? ''}" min="0" step="0.01"
+                    ${isLocked ? "readonly" : ""}
+                    oninput="recalcTotal('${unit._id}')" />
+                </td>`;
+            }
+          });
+
+          // Owner expense type columns
+          expenseTypes.forEach(et => {
+            const m = miscMap[String(et._id)] || {};
+            cols += `<td class="col-owner-exp">
+                <input type="number" id="exp_${unit._id}_${et._id}"
+                  value="${m.amount ?? ''}" min="0" step="0.01"
+                  ${isLocked ? "readonly" : ""} />
+              </td>`;
+          });
+
+          // Free-form misc
+          cols += `<td class="col-owner-exp">
+              <input type="text" id="miscname_${unit._id}"
+                value="${miscFree.description ?? ''}" placeholder="Expense name"
+                ${isLocked ? "readonly" : ""} style="text-align:left;width:100px;" />
+            </td>
+            <td class="col-owner-exp">
+              <input type="number" id="miscamt_${unit._id}"
+                value="${miscFree.amount ?? ''}" min="0" step="0.01"
+                ${isLocked ? "readonly" : ""} />
+            </td>`;
+
+          // Tenant total (read-only)
+          cols += `<td class="col-total">
+              <input type="number" id="unitTotal_${unit._id}" value="${totalVal}" readonly />
+            </td>`;
+
+          return `<tr>${cols}</tr>`;
+        }).join("");
+
+        const unitSection = `
+          <div class="billing-section-label">
+            <i class="fas fa-door-open"></i> Unit Bills
+          </div>
+          <div class="billing-grid-wrapper">
+            <table class="billing-grid">
+              <thead>
+                <tr>${uh1}</tr>
+                <tr>${uh2}</tr>
+              </thead>
+              <tbody>${uRows}</tbody>
+            </table>
+          </div>`;
+
+        container.innerHTML = propSection + unitSection;
+        units.forEach(u => recalcTotal(u._id));
+      }
+
+      // ── Computed field helpers ─────────────────────────────────────────────
+      function onReadingChange(unitId, chargeId, rate) {
+        const prev  = num(document.getElementById(`prev_${unitId}_${chargeId}`)?.value);
+        const curr  = num(document.getElementById(`curr_${unitId}_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`amt_${unitId}_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(Math.max(0, curr - prev) * num(rate));
+        recalcTotal(unitId);
+      }
+
+      function onUsageChange(unitId, chargeId, rate) {
+        const u     = num(document.getElementById(`units_${unitId}_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`amt_${unitId}_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(u * num(rate));
+        recalcTotal(unitId);
+      }
+
+      function onPropReadingChange(chargeId, rate) {
+        const prev  = num(document.getElementById(`prop_prev_${chargeId}`)?.value);
+        const curr  = num(document.getElementById(`prop_curr_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(Math.max(0, curr - prev) * num(rate));
+        recalcAllTotals();
+      }
+
+      function onPropUsageChange(chargeId, rate) {
+        const u     = num(document.getElementById(`prop_units_${chargeId}`)?.value);
+        const amtEl = document.getElementById(`prop_amt_${chargeId}`);
+        if (amtEl) amtEl.value = fmt(u * num(rate));
+        recalcAllTotals();
+      }
+
+      function recalcTotal(unitId) {
+        let total = num(document.getElementById(`rent_${unitId}`)?.value);
+        unitCharges.forEach(ch => {
+          total += num(document.getElementById(`amt_${unitId}_${ch._id}`)?.value);
+        });
+        propCharges.forEach(ch => {
+          total += num(document.getElementById(`prop_amt_${ch._id}`)?.value);
+        });
+        const el = document.getElementById(`unitTotal_${unitId}`);
+        if (el) el.value = fmt(total);
+      }
+
+      function recalcAllTotals() {
+        units.forEach(u => recalcTotal(u._id));
+      }
+
+      // ── Collect form data ──────────────────────────────────────────────────
+      function collectBills() {
+        const propLineItems = propCharges.map(ch => {
+          const item = { chargeId: ch._id, description: ch.name, chargeType: ch.chargeType, rate: ch.rate ?? 0 };
+          if (ch.chargeType === "Reading") {
+            item.prevReading = num(document.getElementById(`prop_prev_${ch._id}`)?.value);
+            item.currReading = num(document.getElementById(`prop_curr_${ch._id}`)?.value);
+          } else if (ch.chargeType === "Usage") {
+            item.units = num(document.getElementById(`prop_units_${ch._id}`)?.value);
+          } else {
+            item.amount = num(document.getElementById(`prop_amt_${ch._id}`)?.value);
+          }
+          return item;
+        });
+
+        return units.map(unit => {
+          const unitLineItems = unitCharges.map(ch => {
+            const item = { chargeId: ch._id, description: ch.name, chargeType: ch.chargeType, rate: ch.rate ?? 0 };
+            if (ch.chargeType === "Reading") {
+              item.prevReading = num(document.getElementById(`prev_${unit._id}_${ch._id}`)?.value);
+              item.currReading = num(document.getElementById(`curr_${unit._id}_${ch._id}`)?.value);
+            } else if (ch.chargeType === "Usage") {
+              item.units = num(document.getElementById(`units_${unit._id}_${ch._id}`)?.value);
+            } else {
+              item.amount = num(document.getElementById(`amt_${unit._id}_${ch._id}`)?.value);
+            }
+            return item;
+          });
+
+          const miscItems = [];
+          expenseTypes.forEach(et => {
+            const amt = num(document.getElementById(`exp_${unit._id}_${et._id}`)?.value);
+            if (amt > 0) miscItems.push({ expenseTypeId: et._id, description: et.name, amount: amt });
+          });
+          const miscName = document.getElementById(`miscname_${unit._id}`)?.value?.trim();
+          const miscAmt  = num(document.getElementById(`miscamt_${unit._id}`)?.value);
+          if (miscName || miscAmt) miscItems.push({ description: miscName || "Misc", amount: miscAmt });
+
+          return {
+            unitId:     unit._id,
+            tenantId:   unit.current_tenant?._id || undefined,
+            rentAmount: num(document.getElementById(`rent_${unit._id}`)?.value),
+            lineItems:  [...unitLineItems, ...propLineItems],
+            miscItems,
+          };
+        });
+      }
+
+      // ── Save Draft ─────────────────────────────────────────────────────────
+      async function saveDraft() {
+        if (!periodId) { showMsg("Load a billing period first", "error"); return; }
+        const btn = document.getElementById("btnSave");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+        try {
+          const res  = await fetch(`${base()}/api/billing/periods/${periodId}/bills`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ bills: collectBills() }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Draft saved successfully");
+        } catch (err) {
+          showMsg(err.message, "error");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Save Draft';
+        }
+      }
+
+      // ── Publish ────────────────────────────────────────────────────────────
+      async function confirmPublish() {
+        if (!periodId) { showMsg("Load a billing period first", "error"); return; }
+        if (!confirm("Publishing will lock this billing period and freeze all tenant/unit data. Continue?")) return;
+
+        const saveRes  = await fetch(`${base()}/api/billing/periods/${periodId}/bills`, {
+          method: "PUT", headers: authHeaders(),
+          body: JSON.stringify({ bills: collectBills() }),
+        });
+        const saveData = await saveRes.json();
+        if (!saveData.success) { showMsg("Save failed: " + saveData.message, "error"); return; }
+
+        const btn = document.getElementById("btnPublish");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Publishing…';
+        try {
+          const res  = await fetch(`${base()}/api/billing/periods/${periodId}/publish`, {
+            method: "PATCH", headers: authHeaders(),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          periodStatus = "published";
+          document.getElementById("btnSave").disabled    = true;
+          btn.disabled  = true;
+          btn.innerHTML = '<i class="fas fa-lock"></i> Published';
+          document.getElementById("periodStatusBadge").className = "period-status published";
+          document.getElementById("periodStatusBadge").innerHTML = '<i class="fas fa-lock"></i> Published';
+          showMsg("Billing period published and locked.");
+          document.querySelectorAll(".billing-grid input:not([type='hidden'])").forEach(i => i.setAttribute("readonly", true));
+          document.querySelectorAll(".billing-grid select").forEach(s => s.setAttribute("disabled", true));
+        } catch (err) {
+          showMsg(err.message, "error");
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-lock"></i> Publish';
+        }
+      }
+
+      // ── Print ──────────────────────────────────────────────────────────────
+      async function printBill() {
+        if (!periodId) { showMsg("Load a billing period first", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/billing/periods/${periodId}/print`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          const bills = data.data?.bills || [];
+          if (!bills.length) {
+            showMsg("No bills found. Save a draft first before printing.", "warning");
+            return;
+          }
+          buildPrintSection(data.data);
+          setTimeout(() => window.print(), 100);
+        } catch (err) {
+          showMsg("Print failed: " + err.message, "error");
+        }
+      }
+
+      function buildPrintSection(data) {
+        const { period, bills } = data;
+        const month       = MONTHS[period.month];
+        const year        = period.year;
+        const propDisplay = period.propertyId?.name || propertyName;
+        const label       = period.status === "published" ? "FINAL" : "DRAFT";
+
+        // ── Tenant slips (3 per row, 9 per A4 page) ──────────────────────────
+        const slips = bills.map(bill => {
+          const rows = [];
+          if (bill.rentAmount) {
+            rows.push(`<tr><td>Rent</td><td class="amount-col">₹${fmt(bill.rentAmount)}</td></tr>`);
+          }
+          (bill.lineItems || []).forEach(li => {
+            if (!li.amount) return;
+            let desc = li.description;
+            if (li.chargeType === "Reading") desc += ` (${li.units ?? 0} units)`;
+            rows.push(`<tr><td>${desc}</td><td class="amount-col">₹${fmt(li.amount)}</td></tr>`);
+          });
+
+          const tableHtml = rows.length
+            ? `<table class="slip-table">
+                <thead><tr><th>Particulars</th><th class="amount-col">Amount</th></tr></thead>
+                <tbody>${rows.join("")}</tbody>
+               </table>`
+            : `<p style="color:#aaa;font-size:7.5pt;">No charges recorded.</p>`;
+
+          return `
+            <div class="bill-slip">
+              <div class="slip-header">
+                <div class="prop-name">${propDisplay}</div>
+                <div class="period-label">${month} ${year} · ${label}</div>
+              </div>
+              <div class="slip-tenant-row">
+                <span class="unit-no">Unit ${bill.unitNumber}</span>
+                ${bill.floor != null ? ` · Floor ${bill.floor}` : ""}
+                ${bill.tenantName !== "Vacant" ? `<br/><span class="tenant-name">${bill.tenantName}</span>` : ""}
+                ${bill.tenantPhone ? `<span style="color:#666;"> · ${bill.tenantPhone}</span>` : ""}
+              </div>
+              ${tableHtml}
+              <div class="slip-total"><span>Total</span><span>₹${fmt(bill.totalAmount)}</span></div>
+              <div class="slip-footer">PropertySync · Generated ${new Date().toLocaleDateString("en-IN")}</div>
+            </div>`;
+        });
+
+        while (slips.length % 3 !== 0) {
+          slips.push(`<div class="bill-slip" style="border-color:transparent;"></div>`);
+        }
+
+        const pages = [];
+        for (let i = 0; i < slips.length; i += 9) {
+          pages.push(`
+            <div class="print-page">
+              <div class="slip-grid">${slips.slice(i, i + 9).join("")}</div>
+            </div>`);
+        }
+
+        // ── Owner expenses summary page (per unit) ────────────────────────────
+        const expBills = bills.filter(b => b.miscItems && b.miscItems.length);
+        if (expBills.length) {
+          let grandTotal = 0;
+          const expRows = expBills.map(b => {
+            const unitTotal = b.miscItems.reduce((s, m) => s + (m.amount || 0), 0);
+            grandTotal += unitTotal;
+            const itemRows = b.miscItems.map(m =>
+              `<tr><td style="padding:3pt 8pt 3pt 20pt;color:#555;">${m.description}</td>
+               <td style="text-align:right;padding:3pt 8pt;">₹${fmt(m.amount)}</td></tr>`
+            ).join("");
+            return `
+              <tr style="background:#fff3e0;">
+                <td style="padding:6pt 8pt;font-weight:700;">Unit ${b.unitNumber}</td>
+                <td style="padding:6pt 8pt;text-align:right;font-weight:700;">₹${fmt(unitTotal)}</td>
+              </tr>${itemRows}`;
+          }).join("");
+
+          pages.push(`
+            <div class="print-page">
+              <div style="padding:24pt;font-family:Arial,sans-serif;font-size:10pt;">
+                <div style="border-bottom:2px solid #e67e22;padding-bottom:8pt;margin-bottom:14pt;">
+                  <div style="font-size:13pt;font-weight:700;color:#e67e22;">${propDisplay}</div>
+                  <div style="font-size:9pt;color:#666;margin-top:4pt;">
+                    Owner Expenses by Unit — ${month} ${year} · ${label}
+                  </div>
+                </div>
+                <table style="width:100%;border-collapse:collapse;font-size:9.5pt;">
+                  <thead>
+                    <tr style="background:#e67e22;color:#fff;">
+                      <th style="text-align:left;padding:6pt 8pt;">Unit / Description</th>
+                      <th style="text-align:right;padding:6pt 8pt;">Amount (₹)</th>
+                    </tr>
+                  </thead>
+                  <tbody>${expRows}</tbody>
+                  <tfoot>
+                    <tr style="font-weight:700;background:#fff3e0;border-top:2px solid #e67e22;">
+                      <td style="padding:6pt 8pt;">Grand Total</td>
+                      <td style="padding:6pt 8pt;text-align:right;">₹${fmt(grandTotal)}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+                <div style="margin-top:12pt;font-size:7.5pt;color:#aaa;">
+                  PropertySync · Generated ${new Date().toLocaleDateString("en-IN")} · Owner's records only
+                </div>
+              </div>
+            </div>`);
+        }
+
+        document.getElementById("printSection").innerHTML = pages.join("");
+      }
+    </script>
+  </body>
+</html>

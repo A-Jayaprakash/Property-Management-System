@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Expense Tracker — PropertySync</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/home.css" />
+    <link rel="stylesheet" href="styles/billing.css" />
+    <style>
+      /* Property expenses table — same feel as prop-charges-grid */
+      .prop-exp-grid .exp-name-cell { text-align: left; font-weight: 600; color: #3949ab; min-width: 150px; }
+      .prop-exp-grid .exp-misc-cell { color: #888; font-style: italic; }
+      .prop-exp-total-row td { background: #e8f5e9; font-weight: 700; color: #1b5e20; }
+
+      /* Expense summary strip */
+      .exp-summary {
+        display: flex; gap: 2rem; flex-wrap: wrap;
+        background: var(--card-bg, #fff);
+        border-radius: 10px;
+        padding: 14px 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        margin-top: .5rem;
+      }
+      .exp-summary-item { display: flex; flex-direction: column; gap: 2px; }
+      .exp-summary-item .lbl { font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .06em; }
+      .exp-summary-item .val { font-size: 1.05rem; font-weight: 700; color: #333; }
+      .exp-summary-item.grand .val { color: #11998e; font-size: 1.2rem; }
+      .exp-summary-item:last-child { margin-left: auto; }
+
+      /* Grand-total row at bottom of unit grid */
+      .unit-exp-grand td { background: #e8f5e9; font-weight: 700; color: #1b5e20; border-color: #c8e6c9; }
+    </style>
+  </head>
+  <body>
+
+    <!-- ── Header ── -->
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <a href="index.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Properties
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Main content ── -->
+    <div class="main-content">
+      <div class="container">
+
+        <!-- Period selector bar (mirrors billing) -->
+        <div class="billing-header-bar">
+          <div>
+            <h2 id="expenseTitle"><i class="fas fa-receipt"></i> Expense Tracker</h2>
+            <div style="font-size:.85rem;color:#888;" id="expenseSubtitle">Select a month and load expenses</div>
+          </div>
+          <div class="period-selector">
+            <select id="selMonth">
+              <option value="1">January</option>
+              <option value="2">February</option>
+              <option value="3">March</option>
+              <option value="4">April</option>
+              <option value="5">May</option>
+              <option value="6">June</option>
+              <option value="7">July</option>
+              <option value="8">August</option>
+              <option value="9">September</option>
+              <option value="10">October</option>
+              <option value="11">November</option>
+              <option value="12">December</option>
+            </select>
+            <input type="number" id="selYear" value="2026" min="2020" max="2099" style="width:80px;" />
+            <button class="btn btn-primary" onclick="loadExpenses()">
+              <i class="fas fa-folder-open"></i> Load
+            </button>
+          </div>
+          <div id="periodStatusBadge" style="display:none;"></div>
+        </div>
+
+        <!-- Action buttons -->
+        <div class="bill-actions" id="expenseActions" style="display:none;">
+          <button class="btn btn-primary" id="btnSave" onclick="saveDraft()">
+            <i class="fas fa-save"></i> Save Draft
+          </button>
+          <button class="btn btn-success" id="btnFinalize" onclick="confirmFinalize()">
+            <i class="fas fa-lock"></i> Finalize
+          </button>
+        </div>
+
+        <!-- Notification -->
+        <div id="notification" style="display:none;padding:12px 16px;border-radius:8px;font-weight:600;margin-bottom:1rem;"></div>
+
+        <!-- Content area (mirrors unitCards in billing) -->
+        <div id="expenseContent">
+          <div class="billing-empty">
+            <i class="fas fa-receipt" style="font-size:2.5rem;margin-bottom:.75rem;color:#ddd;display:block;"></i>
+            Select a month and year, then click <strong>Load</strong> to begin.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      // ── Globals ─────────────────────────────────────────────────────────────
+      const token        = sessionStorage.getItem("authToken");
+      const params       = new URLSearchParams(window.location.search);
+      const propertyId   = params.get("propertyId");
+      const propertyName = decodeURIComponent(params.get("name") || "Property");
+
+      let periodId     = null;
+      let periodStatus = null;   // "draft" | "finalized"
+      let units        = [];
+      let propExpTypes = [];     // active property-level expense types
+      let unitExpTypes = [];     // active unit-level expense types
+
+      const MONTHS = ["","January","February","March","April","May","June",
+                      "July","August","September","October","November","December"];
+
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        window.location.href = "login.html";
+      }
+      function authHeaders() {
+        return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+      }
+      function base() { return API_BASE_URL.replace(/\/$/, ""); }
+      function showMsg(msg, type = "success") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "error" ? "#f8d7da" : "#fff3cd";
+        el.style.color      = type === "success" ? "#155724" : type === "error" ? "#721c24" : "#856404";
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = "none"; }, 5000);
+      }
+      function num(v) { return Number(v) || 0; }
+      function fmt(n) { return Number(n || 0).toLocaleString("en-IN"); }
+
+      // ── Init ────────────────────────────────────────────────────────────────
+      (async () => {
+        if (!token) { window.location.href = "login.html"; return; }
+        if (!propertyId) { showMsg("No property selected.", "error"); return; }
+        document.getElementById("expenseTitle").innerHTML =
+          `<i class="fas fa-receipt"></i> Expense Tracker — ${propertyName}`;
+        document.title = `Expense Tracker — ${propertyName}`;
+        const now = new Date();
+        document.getElementById("selMonth").value = now.getMonth() + 1;
+        document.getElementById("selYear").value  = now.getFullYear();
+      })();
+
+      // ── Load expense types ────────────────────────────────────────────────
+      async function loadExpenseTypes() {
+        const [epRes, euRes] = await Promise.all([
+          fetch(`${base()}/api/expense-types?level=property`, { headers: authHeaders() }),
+          fetch(`${base()}/api/expense-types?level=unit`,     { headers: authHeaders() }),
+        ]);
+        const epData = await epRes.json();
+        const euData = await euRes.json();
+        if (!epData.success) throw new Error(epData.message);
+        if (!euData.success) throw new Error(euData.message);
+        propExpTypes = epData.data || [];
+        unitExpTypes = euData.data || [];
+      }
+
+      // ── Load Expenses ────────────────────────────────────────────────────
+      async function loadExpenses() {
+        const month = parseInt(document.getElementById("selMonth").value);
+        const year  = parseInt(document.getElementById("selYear").value);
+
+        document.getElementById("expenseContent").innerHTML =
+          `<div class="billing-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>`;
+        document.getElementById("expenseActions").style.display   = "none";
+        document.getElementById("periodStatusBadge").style.display = "none";
+
+        const btnSave     = document.getElementById("btnSave");
+        const btnFinalize = document.getElementById("btnFinalize");
+        btnSave.disabled     = false;
+        btnSave.innerHTML    = '<i class="fas fa-save"></i> Save Draft';
+        btnFinalize.disabled  = false;
+        btnFinalize.innerHTML = '<i class="fas fa-lock"></i> Finalize';
+
+        try {
+          await loadExpenseTypes();
+
+          // Get or create expense period
+          const pRes  = await fetch(`${base()}/api/expenses/periods`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ propertyId, month, year }),
+          });
+          const pData = await pRes.json();
+          if (!pData.success) throw new Error(pData.message);
+          periodId     = pData.data._id;
+          periodStatus = pData.data.status;
+
+          // Fetch units (same endpoint as billing)
+          const uRes  = await fetch(`${base()}/api/units/property/${propertyId}`, { headers: authHeaders() });
+          const uData = await uRes.json();
+          if (!uData.units) throw new Error(uData.message || "Failed to load units");
+          units = uData.units || [];
+
+          // Fetch saved expense data for this period
+          const dRes  = await fetch(`${base()}/api/expenses/periods/${periodId}`, { headers: authHeaders() });
+          const dData = await dRes.json();
+          if (!dData.success) throw new Error(dData.message);
+          const { period, unitExpenses } = dData.data;
+
+          renderPeriodStatus(month, year);
+          renderExpenseGrid(period, unitExpenses);
+          document.getElementById("expenseActions").style.display = "flex";
+
+          if (periodStatus === "finalized") {
+            btnSave.disabled     = true;
+            btnFinalize.disabled = true;
+            showMsg("This expense period is finalized and locked.", "warning");
+          }
+        } catch (err) {
+          document.getElementById("expenseContent").innerHTML =
+            `<div class="billing-empty" style="color:#c00;"><i class="fas fa-exclamation-triangle"></i> ${err.message}</div>`;
+          showMsg(err.message, "error");
+        }
+      }
+
+      function renderPeriodStatus(month, year) {
+        const badge = document.getElementById("periodStatusBadge");
+        badge.style.display = "inline-flex";
+        badge.className     = `period-status ${periodStatus}`;
+        const icon = periodStatus === "finalized" ? "fa-lock" : "fa-pencil-alt";
+        badge.innerHTML = `<i class="fas ${icon}"></i> ${periodStatus === "finalized" ? "Finalized" : "Draft"} — ${MONTHS[month]} ${year}`;
+        document.getElementById("expenseSubtitle").textContent =
+          `${MONTHS[month]} ${year} · ${units.length} unit(s)`;
+      }
+
+      // ── Render grid ──────────────────────────────────────────────────────
+      function renderExpenseGrid(period, unitExpenses) {
+        const container  = document.getElementById("expenseContent");
+        const isLocked   = periodStatus === "finalized";
+
+        // ── Property-Level Expenses Table ──────────────────────────────────
+        let propSection = "";
+        if (propExpTypes.length) {
+          const savedMap = {};
+          (period.propertyItems || []).forEach(item => {
+            if (item.expenseTypeId) savedMap[item.expenseTypeId] = item;
+          });
+          const miscItem = (period.propertyItems || []).find(i => !i.expenseTypeId) || {};
+
+          const propRows = propExpTypes.map(et => {
+            const saved = savedMap[et._id] || {};
+            return `<tr>
+              <td class="exp-name-cell">${et.name}</td>
+              <td style="text-align:left;">
+                <input type="text" id="pdesc_${et._id}" value="${escHtml(saved.description || '')}"
+                  placeholder="Notes…" ${isLocked ? "readonly" : ""}
+                  style="text-align:left;width:180px;" />
+              </td>
+              <td>
+                <input type="number" id="pamt_${et._id}" value="${saved.amount || 0}" min="0"
+                  oninput="recalcPropTotal()" ${isLocked ? "readonly" : ""} style="width:100px;" />
+              </td>
+            </tr>`;
+          }).join("");
+
+          const miscRow = `<tr>
+            <td class="exp-misc-cell" style="text-align:left;">
+              <input type="text" id="pmisc_name" value="${escHtml(miscItem.description || '')}"
+                placeholder="Other expense…" ${isLocked ? "readonly" : ""}
+                style="text-align:left;width:100%;font-style:normal;" />
+            </td>
+            <td></td>
+            <td>
+              <input type="number" id="pmisc_amt" value="${miscItem.amount || 0}" min="0"
+                oninput="recalcPropTotal()" ${isLocked ? "readonly" : ""} style="width:100px;" />
+            </td>
+          </tr>`;
+
+          const totalRow = `<tr class="prop-exp-total-row">
+            <td colspan="2" style="text-align:left;padding-left:10px;">
+              <i class="fas fa-sigma"></i> Property Total
+            </td>
+            <td>
+              <input type="number" id="propExpTotal" value="0" readonly style="width:100px;font-weight:700;" />
+            </td>
+          </tr>`;
+
+          propSection = `
+            <div class="billing-section-label">
+              <i class="fas fa-building"></i> Property-Level Expenses
+            </div>
+            <div class="billing-grid-wrapper">
+              <table class="billing-grid prop-charges-grid prop-exp-grid">
+                <thead>
+                  <tr>
+                    <th class="col-unit-hd">Expense Type</th>
+                    <th class="col-unit-hd" style="min-width:200px;">Description / Notes</th>
+                    <th class="col-calc-hd">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>${propRows}${miscRow}${totalRow}</tbody>
+              </table>
+            </div>`;
+        }
+
+        // ── Unit-Level Expenses Table ───────────────────────────────────────
+        let unitSection = "";
+        if (!units.length) {
+          unitSection = `
+            <div class="billing-section-label">
+              <i class="fas fa-door-open"></i> Unit-Level Expenses
+            </div>
+            <div class="billing-empty">No active units found for this property.</div>`;
+        } else {
+          const ueMap = {};
+          unitExpenses.forEach(ue => {
+            const uid = ue.unitId?._id || ue.unitId;
+            ueMap[uid] = ue;
+          });
+
+          // Header row 1 + row 2
+          let uh1 = `<th rowspan="2" class="col-unit-hd">Unit</th>`;
+          let uh2 = ``;
+
+          if (unitExpTypes.length) {
+            uh1 += `<th colspan="${unitExpTypes.length}" class="col-owner-hd">
+                      <i class="fas fa-wallet"></i> Unit Expenses
+                    </th>`;
+            unitExpTypes.forEach(et => {
+              uh2 += `<th class="col-owner-sub-hd">${et.name} (₹)</th>`;
+            });
+          }
+
+          uh1 += `<th colspan="2" class="col-owner-hd">Misc</th>`;
+          uh2 += `<th class="col-owner-sub-hd">Name</th>
+                  <th class="col-owner-sub-hd">Amount (₹)</th>`;
+          uh1 += `<th rowspan="2" class="col-total-hd">Total (₹)</th>`;
+
+          // Data rows
+          const uRows = units.map(unit => {
+            const uid        = unit._id;
+            const ue         = ueMap[uid] || {};
+            const itemMap    = {};
+            (ue.items || []).forEach(i => { itemMap[i.expenseTypeId] = i; });
+            const tenantLabel = unit.current_tenant?.fullName || "Vacant";
+
+            let cols = `<td class="col-unit">
+              <div class="unit-label">Unit ${unit.unit_number}</div>
+              <div class="unit-tenant">${tenantLabel}</div>
+            </td>`;
+
+            unitExpTypes.forEach(et => {
+              const saved = itemMap[et._id] || {};
+              cols += `<td class="col-owner-exp">
+                <input type="number" id="uexp_${uid}_${et._id}"
+                  value="${saved.amount || 0}" min="0"
+                  oninput="recalcUnitTotal('${uid}')"
+                  ${isLocked ? "readonly" : ""} />
+              </td>`;
+            });
+
+            cols += `<td class="col-owner-exp">
+              <input type="text" id="uexp_misc_name_${uid}"
+                value="${escHtml(ue.miscName || '')}" placeholder="Note…"
+                ${isLocked ? "readonly" : ""} />
+            </td>
+            <td class="col-owner-exp">
+              <input type="number" id="uexp_misc_amt_${uid}"
+                value="${ue.miscAmount || 0}" min="0"
+                oninput="recalcUnitTotal('${uid}')"
+                ${isLocked ? "readonly" : ""} />
+            </td>
+            <td class="col-total">
+              <input type="number" id="uexp_total_${uid}" value="0" readonly />
+            </td>`;
+
+            return `<tr>${cols}</tr>`;
+          }).join("");
+
+          // Column totals row
+          let grandCols = `<td class="unit-exp-grand" style="text-align:left;padding-left:8px;"><strong>Total</strong></td>`;
+          unitExpTypes.forEach(et => {
+            grandCols += `<td class="unit-exp-grand">
+              <input type="number" id="ucol_${et._id}" value="0" readonly style="font-weight:700;" />
+            </td>`;
+          });
+          grandCols += `<td class="unit-exp-grand"></td>
+            <td class="unit-exp-grand">
+              <input type="number" id="ugrand_misc" value="0" readonly style="font-weight:700;" />
+            </td>
+            <td class="unit-exp-grand">
+              <input type="number" id="ugrand_total" value="0" readonly style="font-weight:700;" />
+            </td>`;
+
+          unitSection = `
+            <div class="billing-section-label">
+              <i class="fas fa-door-open"></i> Unit-Level Expenses
+            </div>
+            <div class="billing-grid-wrapper">
+              <table class="billing-grid">
+                <thead>
+                  <tr>${uh1}</tr>
+                  <tr>${uh2}</tr>
+                </thead>
+                <tbody>
+                  ${uRows}
+                  <tr>${grandCols}</tr>
+                </tbody>
+              </table>
+            </div>`;
+        }
+
+        // ── Summary strip ───────────────────────────────────────────────────
+        const summarySection = `
+          <div class="exp-summary">
+            <div class="exp-summary-item">
+              <span class="lbl">Property Total</span>
+              <span class="val" id="summaryPropTotal">₹ 0</span>
+            </div>
+            <div class="exp-summary-item">
+              <span class="lbl">Unit Expenses Total</span>
+              <span class="val" id="summaryUnitTotal">₹ 0</span>
+            </div>
+            <div class="exp-summary-item grand">
+              <span class="lbl">Grand Total</span>
+              <span class="val" id="summaryGrand">₹ 0</span>
+            </div>
+          </div>`;
+
+        container.innerHTML = propSection + unitSection + summarySection;
+
+        // Calculate initial totals
+        recalcPropTotal();
+        units.forEach(u => recalcUnitTotal(u._id));
+      }
+
+      // ── Recalc helpers ───────────────────────────────────────────────────
+      function recalcPropTotal() {
+        let total = 0;
+        propExpTypes.forEach(et => {
+          total += num(document.getElementById(`pamt_${et._id}`)?.value);
+        });
+        total += num(document.getElementById("pmisc_amt")?.value);
+        const el = document.getElementById("propExpTotal");
+        if (el) el.value = total;
+        recalcSummary();
+      }
+
+      function recalcUnitTotal(uid) {
+        let total = 0;
+        unitExpTypes.forEach(et => {
+          total += num(document.getElementById(`uexp_${uid}_${et._id}`)?.value);
+        });
+        total += num(document.getElementById(`uexp_misc_amt_${uid}`)?.value);
+        const el = document.getElementById(`uexp_total_${uid}`);
+        if (el) el.value = total;
+        recalcColumnTotals();
+        recalcSummary();
+      }
+
+      function recalcColumnTotals() {
+        unitExpTypes.forEach(et => {
+          let col = 0;
+          units.forEach(u => { col += num(document.getElementById(`uexp_${u._id}_${et._id}`)?.value); });
+          const el = document.getElementById(`ucol_${et._id}`);
+          if (el) el.value = col;
+        });
+        let misc = 0, grand = 0;
+        units.forEach(u => {
+          misc  += num(document.getElementById(`uexp_misc_amt_${u._id}`)?.value);
+          grand += num(document.getElementById(`uexp_total_${u._id}`)?.value);
+        });
+        const mEl = document.getElementById("ugrand_misc");
+        const gEl = document.getElementById("ugrand_total");
+        if (mEl) mEl.value = misc;
+        if (gEl) gEl.value = grand;
+      }
+
+      function recalcSummary() {
+        const propTotal  = num(document.getElementById("propExpTotal")?.value);
+        const unitTotal  = num(document.getElementById("ugrand_total")?.value);
+        const grand      = propTotal + unitTotal;
+        const sp = document.getElementById("summaryPropTotal");
+        const su = document.getElementById("summaryUnitTotal");
+        const sg = document.getElementById("summaryGrand");
+        if (sp) sp.textContent = `₹ ${fmt(propTotal)}`;
+        if (su) su.textContent = `₹ ${fmt(unitTotal)}`;
+        if (sg) sg.textContent = `₹ ${fmt(grand)}`;
+      }
+
+      // ── Collect form data ─────────────────────────────────────────────────
+      function collectData() {
+        const propertyItems = [];
+        propExpTypes.forEach(et => {
+          const desc = document.getElementById(`pdesc_${et._id}`)?.value?.trim() || "";
+          const amt  = num(document.getElementById(`pamt_${et._id}`)?.value);
+          propertyItems.push({ expenseTypeId: et._id, description: desc, amount: amt });
+        });
+        const miscName = document.getElementById("pmisc_name")?.value?.trim() || "";
+        const miscAmt  = num(document.getElementById("pmisc_amt")?.value);
+        if (miscName || miscAmt > 0) propertyItems.push({ description: miscName, amount: miscAmt });
+
+        const unitExpenses = units.map(unit => {
+          const uid   = unit._id;
+          const items = unitExpTypes.map(et => ({
+            expenseTypeId: et._id,
+            amount: num(document.getElementById(`uexp_${uid}_${et._id}`)?.value),
+          }));
+          return {
+            unitId:     uid,
+            items,
+            miscName:   document.getElementById(`uexp_misc_name_${uid}`)?.value?.trim() || "",
+            miscAmount: num(document.getElementById(`uexp_misc_amt_${uid}`)?.value),
+          };
+        });
+
+        return { propertyItems, unitExpenses };
+      }
+
+      // ── Save Draft ─────────────────────────────────────────────────────────
+      async function saveDraft() {
+        if (!periodId) { showMsg("Load an expense period first", "error"); return; }
+        const btn = document.getElementById("btnSave");
+        btn.disabled  = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+        try {
+          const res  = await fetch(`${base()}/api/expenses/periods/${periodId}`, {
+            method: "PUT", headers: authHeaders(), body: JSON.stringify(collectData()),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Expenses saved successfully.");
+        } catch (err) {
+          showMsg(err.message, "error");
+        } finally {
+          btn.disabled  = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Save Draft';
+        }
+      }
+
+      // ── Finalize ───────────────────────────────────────────────────────────
+      async function confirmFinalize() {
+        if (!periodId) { showMsg("Load an expense period first", "error"); return; }
+        if (!confirm("Finalizing will lock this expense record and prevent further edits. Continue?")) return;
+
+        // Save first
+        const saveRes  = await fetch(`${base()}/api/expenses/periods/${periodId}`, {
+          method: "PUT", headers: authHeaders(), body: JSON.stringify(collectData()),
+        });
+        const saveData = await saveRes.json();
+        if (!saveData.success) { showMsg("Save failed: " + saveData.message, "error"); return; }
+
+        const btn = document.getElementById("btnFinalize");
+        btn.disabled  = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Finalizing…';
+        try {
+          const res  = await fetch(`${base()}/api/expenses/periods/${periodId}/finalize`, {
+            method: "PATCH", headers: authHeaders(),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          periodStatus = "finalized";
+          document.getElementById("btnSave").disabled = true;
+          btn.disabled  = true;
+          btn.innerHTML = '<i class="fas fa-lock"></i> Finalized';
+          const badge = document.getElementById("periodStatusBadge");
+          badge.className   = "period-status finalized";
+          badge.innerHTML   = '<i class="fas fa-lock"></i> Finalized';
+          showMsg("Expense record finalized and locked.");
+          document.querySelectorAll("#expenseContent input:not([type='hidden'])").forEach(i => i.setAttribute("readonly", true));
+        } catch (err) {
+          showMsg(err.message, "error");
+          btn.disabled  = false;
+          btn.innerHTML = '<i class="fas fa-lock"></i> Finalize';
+        }
+      }
+
+      // ── Escape HTML ────────────────────────────────────────────────────────
+      function escHtml(str) {
+        return String(str)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+    </script>
+  </body>
+</html>

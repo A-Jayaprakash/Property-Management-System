@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Configuration — PropertySync</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles/home.css" />
+    <style>
+      /* ── Page header ── */
+      .page-header { margin-bottom: 1.5rem; }
+      .page-header h1 { font-size: 1.4rem; margin: 0 0 .25rem; display: flex; align-items: center; gap: .5rem; }
+      .page-header p  { margin: 0; font-size: .88rem; color: #888; }
+
+      /* ── Tabs ── */
+      .config-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: .5rem;
+        margin-bottom: 1.5rem;
+      }
+      .tab-btn {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .25rem;
+        padding: .85rem .5rem;
+        border: 2px solid #e0e0e0;
+        border-radius: 10px;
+        background: #fff;
+        cursor: pointer;
+        font-size: .88rem;
+        font-weight: 600;
+        color: #555;
+        transition: all .18s;
+      }
+      .tab-btn i { font-size: 1.25rem; }
+      .tab-btn .tab-sub { font-size: .72rem; font-weight: 400; color: #aaa; }
+      .tab-btn:hover { border-color: #667eea; color: #667eea; }
+      .tab-btn.active { border-color: #667eea; background: #667eea; color: #fff; }
+      .tab-btn.active .tab-sub { color: rgba(255,255,255,.75); }
+      /* Orange for expense tabs */
+      .tab-btn.expense-tab:hover { border-color: #e67e22; color: #e67e22; }
+      .tab-btn.expense-tab.active { border-color: #e67e22; background: #e67e22; }
+
+      /* ── Section description ── */
+      .section-desc {
+        display: flex;
+        align-items: flex-start;
+        gap: .75rem;
+        padding: .85rem 1rem;
+        border-radius: 8px;
+        font-size: .88rem;
+        margin-bottom: 1.25rem;
+      }
+      .section-desc.charge-desc  { background: #eef0fb; color: #3949ab; border-left: 4px solid #667eea; }
+      .section-desc.expense-desc { background: #fff3e0; color: #bf5000; border-left: 4px solid #e67e22; }
+      .section-desc i { font-size: 1.1rem; margin-top: 1px; flex-shrink: 0; }
+
+      /* ── Add form ── */
+      .add-form {
+        display: flex;
+        gap: .6rem;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-bottom: 1.1rem;
+        padding: 1rem 1.1rem;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+      }
+      .add-form input, .add-form select {
+        padding: 8px 11px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: .92rem;
+        font-family: inherit;
+      }
+      .add-form input[type="text"]   { flex: 1; min-width: 150px; }
+      .add-form input[type="number"] { width: 100px; }
+      .add-form label { font-size: .82rem; font-weight: 600; color: #555; white-space: nowrap; }
+
+      /* ── Config table ── */
+      .cfg-table-wrap {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.07);
+        overflow: hidden;
+      }
+      .cfg-table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+      .cfg-table th {
+        padding: 10px 14px;
+        text-align: left;
+        font-weight: 600;
+        font-size: .82rem;
+        color: #555;
+        background: #f8f9fa;
+        border-bottom: 2px solid #e0e0e0;
+      }
+      .cfg-table td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+      .cfg-table tr:last-child td { border-bottom: none; }
+      .cfg-table tr:hover td { background: #fafafa; }
+      .cfg-table tr.editing td { background: #fffbf0; }
+
+      /* Inline edit inputs */
+      .cfg-table input.edit-input {
+        padding: 5px 8px;
+        border: 1px solid #667eea;
+        border-radius: 6px;
+        font-size: .88rem;
+        font-family: inherit;
+        width: 160px;
+      }
+      .cfg-table input.edit-input.rate-input { width: 80px; }
+      .cfg-table select.edit-select {
+        padding: 5px 8px;
+        border: 1px solid #667eea;
+        border-radius: 6px;
+        font-size: .88rem;
+        font-family: inherit;
+      }
+
+      /* Status badges */
+      .badge-active   { display:inline-block; padding:3px 10px; border-radius:20px; background:#d4edda; color:#155724; font-size:.78rem; font-weight:600; }
+      .badge-inactive { display:inline-block; padding:3px 10px; border-radius:20px; background:#f8d7da; color:#721c24; font-size:.78rem; font-weight:600; }
+      .badge-reading  { display:inline-block; padding:3px 10px; border-radius:20px; background:#d1ecf1; color:#0c5460; font-size:.78rem; font-weight:600; }
+      .badge-usage    { display:inline-block; padding:3px 10px; border-radius:20px; background:#fff3cd; color:#856404; font-size:.78rem; font-weight:600; }
+      .badge-normal   { display:inline-block; padding:3px 10px; border-radius:20px; background:#e2e3e5; color:#383d41; font-size:.78rem; font-weight:600; }
+
+      /* Row action buttons */
+      .row-btn {
+        padding: 4px 10px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: .8rem;
+        font-weight: 600;
+        margin-right: .3rem;
+        transition: opacity .15s;
+      }
+      .row-btn:hover { opacity: .82; }
+      .btn-edit     { background: #e8eaf6; color: #3949ab; }
+      .btn-save     { background: #28a745; color: #fff; }
+      .btn-cancel   { background: #6c757d; color: #fff; }
+      .btn-activate { background: #28a745; color: #fff; }
+      .btn-deactivate { background: #dc3545; color: #fff; }
+
+      /* Empty / loading state */
+      .table-empty { padding: 2.5rem 1rem; text-align: center; color: #aaa; font-size: .95rem; }
+
+      /* Notification */
+      #notification {
+        display: none;
+        padding: 11px 15px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: .9rem;
+        margin-bottom: 1.1rem;
+      }
+
+      @media (max-width: 640px) {
+        .config-tabs { grid-template-columns: repeat(2, 1fr); }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ── Header ── -->
+    <div class="header">
+      <div class="container">
+        <div class="header-content">
+          <div class="logo">
+            <i class="fas fa-building"></i>
+            <span>PropertySync</span>
+          </div>
+          <div class="header-actions">
+            <a href="home.html" class="btn btn-secondary" style="text-decoration:none;">
+              <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+            <button class="btn btn-danger" onclick="logout()">
+              <i class="fas fa-sign-out-alt"></i> Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="container">
+
+        <div class="page-header">
+          <h1><i class="fas fa-sliders-h"></i> Configuration</h1>
+          <p>Manage charge and expense types that appear in the monthly billing module</p>
+        </div>
+
+        <div id="notification"></div>
+
+        <!-- ── 4 Tabs ── -->
+        <div class="config-tabs">
+          <button class="tab-btn active" id="tbtn_propCharges" onclick="switchTab('propCharges')">
+            <i class="fas fa-building"></i>
+            Property Charges
+            <span class="tab-sub">Tenant billing</span>
+          </button>
+          <button class="tab-btn" id="tbtn_unitCharges" onclick="switchTab('unitCharges')">
+            <i class="fas fa-door-open"></i>
+            Unit Charges
+            <span class="tab-sub">Tenant billing</span>
+          </button>
+          <button class="tab-btn expense-tab" id="tbtn_propExpenses" onclick="switchTab('propExpenses')">
+            <i class="fas fa-wallet"></i>
+            Property Expenses
+            <span class="tab-sub">Manager records</span>
+          </button>
+          <button class="tab-btn expense-tab" id="tbtn_unitExpenses" onclick="switchTab('unitExpenses')">
+            <i class="fas fa-tools"></i>
+            Unit Expenses
+            <span class="tab-sub">Manager records</span>
+          </button>
+        </div>
+
+        <!-- ── Tab: Property Charges ── -->
+        <div id="tab_propCharges" class="tab-panel">
+          <div class="section-desc charge-desc">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Property-level charges</strong> are shared across all units and included in every tenant's monthly bill.
+              Examples: common area electricity, water supply, maintenance fee.
+              Activate a charge type to make it appear as a row in the billing grid.
+            </div>
+          </div>
+          <div class="add-form">
+            <label>Name</label>
+            <input type="text" id="pc_name" placeholder="e.g. Water Supply" />
+            <label>Type</label>
+            <select id="pc_type">
+              <option value="Normal">Normal (flat amount)</option>
+              <option value="Reading">Reading (meter — units × rate)</option>
+              <option value="Usage">Usage (units × rate)</option>
+            </select>
+            <label>Rate</label>
+            <input type="number" id="pc_rate" placeholder="0.00" min="0" step="0.01" />
+            <button class="btn btn-primary" onclick="addCharge('property','pc')">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="cfg-table-wrap">
+            <table class="cfg-table">
+              <thead>
+                <tr>
+                  <th>Charge Name</th>
+                  <th>Type</th>
+                  <th>Rate (₹)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody_propCharges">
+                <tr><td colspan="5" class="table-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Tab: Unit Charges ── -->
+        <div id="tab_unitCharges" class="tab-panel" style="display:none;">
+          <div class="section-desc charge-desc">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Unit-level charges</strong> are individual to each unit and entered per-unit in the monthly bill.
+              Examples: electricity meter reading, gas usage, parking fee.
+              Activate a charge type to make it appear as a column in the unit bills grid.
+            </div>
+          </div>
+          <div class="add-form">
+            <label>Name</label>
+            <input type="text" id="uc_name" placeholder="e.g. Electricity" />
+            <label>Type</label>
+            <select id="uc_type">
+              <option value="Normal">Normal (flat amount)</option>
+              <option value="Reading">Reading (meter — units × rate)</option>
+              <option value="Usage">Usage (units × rate)</option>
+            </select>
+            <label>Rate</label>
+            <input type="number" id="uc_rate" placeholder="0.00" min="0" step="0.01" />
+            <button class="btn btn-primary" onclick="addCharge('unit','uc')">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="cfg-table-wrap">
+            <table class="cfg-table">
+              <thead>
+                <tr>
+                  <th>Charge Name</th>
+                  <th>Type</th>
+                  <th>Rate (₹)</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody_unitCharges">
+                <tr><td colspan="5" class="table-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Tab: Property Expenses ── -->
+        <div id="tab_propExpenses" class="tab-panel" style="display:none;">
+          <div class="section-desc expense-desc">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Property-level expense types</strong> track costs incurred by the property manager at the property level
+              (not charged to tenants). Examples: building painting, roof repair, landscaping.
+              These will be available in the manager's expense tracking module.
+            </div>
+          </div>
+          <div class="add-form">
+            <label>Name</label>
+            <input type="text" id="pe_name" placeholder="e.g. Building Painting" />
+            <button class="btn btn-warning" onclick="addExpense('property','pe')" style="background:#e67e22;color:#fff;border:none;">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="cfg-table-wrap">
+            <table class="cfg-table">
+              <thead>
+                <tr>
+                  <th>Expense Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody_propExpenses">
+                <tr><td colspan="3" class="table-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- ── Tab: Unit Expenses ── -->
+        <div id="tab_unitExpenses" class="tab-panel" style="display:none;">
+          <div class="section-desc expense-desc">
+            <i class="fas fa-info-circle"></i>
+            <div>
+              <strong>Unit-level expense types</strong> track costs incurred by the manager per unit
+              (not charged to tenants). Examples: electrical repair, plumbing, painting.
+              Active types appear as dedicated columns in the billing grid's Owner Expenses section.
+            </div>
+          </div>
+          <div class="add-form">
+            <label>Name</label>
+            <input type="text" id="ue_name" placeholder="e.g. Plumbing Repair" />
+            <button class="btn btn-warning" onclick="addExpense('unit','ue')" style="background:#e67e22;color:#fff;border:none;">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div class="cfg-table-wrap">
+            <table class="cfg-table">
+              <thead>
+                <tr>
+                  <th>Expense Name</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tbody_unitExpenses">
+                <tr><td colspan="3" class="table-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <script src="auth/config.js"></script>
+    <script>
+      const token = sessionStorage.getItem("authToken");
+      if (!token) window.location.href = "login.html";
+
+      function logout() {
+        sessionStorage.removeItem("authToken");
+        sessionStorage.removeItem("userData");
+        window.location.href = "login.html";
+      }
+
+      function authHeaders() {
+        return { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+      }
+
+      function base() { return API_BASE_URL.replace(/\/$/, ""); }
+
+      function showMsg(msg, type = "success") {
+        const el = document.getElementById("notification");
+        el.textContent = msg;
+        el.style.display = "block";
+        el.style.background = type === "success" ? "#d4edda" : type === "error" ? "#f8d7da" : "#fff3cd";
+        el.style.color      = type === "success" ? "#155724" : type === "error" ? "#721c24" : "#856404";
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.style.display = "none"; }, 4000);
+      }
+
+      // ── Tab switching ──────────────────────────────────────────────────────
+      let activeTab = "propCharges";
+
+      function switchTab(key) {
+        document.querySelectorAll(".tab-panel").forEach(p => p.style.display = "none");
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        document.getElementById(`tab_${key}`).style.display = "block";
+        document.getElementById(`tbtn_${key}`).classList.add("active");
+        activeTab = key;
+      }
+
+      // ── Helpers ───────────────────────────────────────────────────────────
+      function typeBadge(type) {
+        const cls = type === "Reading" ? "badge-reading" : type === "Usage" ? "badge-usage" : "badge-normal";
+        return `<span class="${cls}">${type}</span>`;
+      }
+
+      function statusBadge(active) {
+        return active
+          ? `<span class="badge-active"><i class="fas fa-check-circle"></i> Active</span>`
+          : `<span class="badge-inactive"><i class="fas fa-times-circle"></i> Inactive</span>`;
+      }
+
+      // ── Load all sections on page load ─────────────────────────────────────
+      (async () => {
+        await Promise.all([
+          loadCharges("property"),
+          loadCharges("unit"),
+          loadExpenses("property"),
+          loadExpenses("unit"),
+        ]);
+      })();
+
+      // ── CHARGES ───────────────────────────────────────────────────────────
+      async function loadCharges(level) {
+        const tbodyId = level === "property" ? "tbody_propCharges" : "tbody_unitCharges";
+        try {
+          const res  = await fetch(`${base()}/api/charges?level=${level}&all=true`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          renderCharges(level, data.data);
+        } catch (err) {
+          document.getElementById(tbodyId).innerHTML =
+            `<tr><td colspan="5" class="table-empty" style="color:#c00;">${err.message}</td></tr>`;
+        }
+      }
+
+      function renderCharges(level, items) {
+        const tbodyId = level === "property" ? "tbody_propCharges" : "tbody_unitCharges";
+        const tbody   = document.getElementById(tbodyId);
+        if (!items.length) {
+          tbody.innerHTML = `<tr><td colspan="5" class="table-empty">No charge types added yet. Use the form above to add one.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = items.map(ch => chargeRow(ch)).join("");
+      }
+
+      function chargeRow(ch) {
+        return `<tr id="crow_${ch._id}">
+          <td><strong>${ch.name}</strong></td>
+          <td>${typeBadge(ch.chargeType)}</td>
+          <td>₹ ${Number(ch.rate || 0).toFixed(2)}</td>
+          <td>${statusBadge(ch.isActive)}</td>
+          <td>
+            <button class="row-btn btn-edit" onclick="startEditCharge('${ch._id}','${ch.name}','${ch.chargeType}',${ch.rate || 0},'${ch.level}')">
+              <i class="fas fa-pen"></i> Edit
+            </button>
+            ${ch.isActive
+              ? `<button class="row-btn btn-deactivate" onclick="toggleCharge('${ch._id}',false,'${ch.level}')"><i class="fas fa-ban"></i> Deactivate</button>`
+              : `<button class="row-btn btn-activate"   onclick="toggleCharge('${ch._id}',true,'${ch.level}')"><i class="fas fa-check"></i> Activate</button>`}
+          </td>
+        </tr>`;
+      }
+
+      function startEditCharge(id, name, type, rate, level) {
+        const row = document.getElementById(`crow_${id}`);
+        row.classList.add("editing");
+        row.innerHTML = `
+          <td><input class="edit-input" id="edit_name_${id}" value="${name}" /></td>
+          <td>
+            <select class="edit-select" id="edit_type_${id}">
+              <option value="Normal"  ${type === "Normal"  ? "selected" : ""}>Normal</option>
+              <option value="Reading" ${type === "Reading" ? "selected" : ""}>Reading</option>
+              <option value="Usage"   ${type === "Usage"   ? "selected" : ""}>Usage</option>
+            </select>
+          </td>
+          <td><input class="edit-input rate-input" type="number" id="edit_rate_${id}" value="${rate}" min="0" step="0.01" /></td>
+          <td>—</td>
+          <td>
+            <button class="row-btn btn-save"   onclick="saveEditCharge('${id}','${level}')"><i class="fas fa-check"></i> Save</button>
+            <button class="row-btn btn-cancel" onclick="loadCharges('${level}')"><i class="fas fa-times"></i> Cancel</button>
+          </td>`;
+      }
+
+      async function saveEditCharge(id, level) {
+        const name      = document.getElementById(`edit_name_${id}`)?.value?.trim();
+        const chargeType = document.getElementById(`edit_type_${id}`)?.value;
+        const rate      = parseFloat(document.getElementById(`edit_rate_${id}`)?.value) || 0;
+        if (!name) { showMsg("Name cannot be empty", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/charges/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ name, chargeType, rate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Charge updated");
+          loadCharges(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function toggleCharge(id, activate, level) {
+        try {
+          const res  = await fetch(`${base()}/api/charges/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ isActive: activate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`Charge ${activate ? "activated" : "deactivated"}`);
+          loadCharges(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function addCharge(level, prefix) {
+        const name       = document.getElementById(`${prefix}_name`)?.value?.trim();
+        const chargeType = document.getElementById(`${prefix}_type`)?.value;
+        const rate       = parseFloat(document.getElementById(`${prefix}_rate`)?.value) || 0;
+        if (!name) { showMsg("Enter a charge name", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/charges`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ name, chargeType, level, rate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`"${name}" added`);
+          document.getElementById(`${prefix}_name`).value = "";
+          document.getElementById(`${prefix}_rate`).value = "";
+          loadCharges(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      // ── EXPENSES ──────────────────────────────────────────────────────────
+      async function loadExpenses(level) {
+        const tbodyId = level === "property" ? "tbody_propExpenses" : "tbody_unitExpenses";
+        try {
+          const res  = await fetch(`${base()}/api/expense-types?level=${level}&all=true`, { headers: authHeaders() });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          renderExpenses(level, data.data);
+        } catch (err) {
+          document.getElementById(tbodyId).innerHTML =
+            `<tr><td colspan="3" class="table-empty" style="color:#c00;">${err.message}</td></tr>`;
+        }
+      }
+
+      function renderExpenses(level, items) {
+        const tbodyId = level === "property" ? "tbody_propExpenses" : "tbody_unitExpenses";
+        const tbody   = document.getElementById(tbodyId);
+        if (!items.length) {
+          tbody.innerHTML = `<tr><td colspan="3" class="table-empty">No expense types added yet. Use the form above to add one.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = items.map(et => expenseRow(et)).join("");
+      }
+
+      function expenseRow(et) {
+        return `<tr id="erow_${et._id}">
+          <td><strong>${et.name}</strong></td>
+          <td>${statusBadge(et.isActive)}</td>
+          <td>
+            <button class="row-btn btn-edit" onclick="startEditExpense('${et._id}','${et.name}','${et.level}')">
+              <i class="fas fa-pen"></i> Edit
+            </button>
+            ${et.isActive
+              ? `<button class="row-btn btn-deactivate" onclick="toggleExpense('${et._id}',false,'${et.level}')"><i class="fas fa-ban"></i> Deactivate</button>`
+              : `<button class="row-btn btn-activate"   onclick="toggleExpense('${et._id}',true,'${et.level}')"><i class="fas fa-check"></i> Activate</button>`}
+          </td>
+        </tr>`;
+      }
+
+      function startEditExpense(id, name, level) {
+        const row = document.getElementById(`erow_${id}`);
+        row.classList.add("editing");
+        row.innerHTML = `
+          <td><input class="edit-input" id="eedit_name_${id}" value="${name}" style="width:220px;" /></td>
+          <td>—</td>
+          <td>
+            <button class="row-btn btn-save"   onclick="saveEditExpense('${id}','${level}')"><i class="fas fa-check"></i> Save</button>
+            <button class="row-btn btn-cancel" onclick="loadExpenses('${level}')"><i class="fas fa-times"></i> Cancel</button>
+          </td>`;
+      }
+
+      async function saveEditExpense(id, level) {
+        const name = document.getElementById(`eedit_name_${id}`)?.value?.trim();
+        if (!name) { showMsg("Name cannot be empty", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/expense-types/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ name }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg("Expense type updated");
+          loadExpenses(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function toggleExpense(id, activate, level) {
+        try {
+          const res  = await fetch(`${base()}/api/expense-types/${id}`, {
+            method: "PUT", headers: authHeaders(),
+            body: JSON.stringify({ isActive: activate }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`Expense type ${activate ? "activated" : "deactivated"}`);
+          loadExpenses(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+
+      async function addExpense(level, prefix) {
+        const name = document.getElementById(`${prefix}_name`)?.value?.trim();
+        if (!name) { showMsg("Enter an expense name", "error"); return; }
+        try {
+          const res  = await fetch(`${base()}/api/expense-types`, {
+            method: "POST", headers: authHeaders(),
+            body: JSON.stringify({ name, level }),
+          });
+          const data = await res.json();
+          if (!data.success) throw new Error(data.message);
+          showMsg(`"${name}" added`);
+          document.getElementById(`${prefix}_name`).value = "";
+          loadExpenses(level);
+        } catch (err) { showMsg(err.message, "error"); }
+      }
+    </script>
+  </body>
+</html>

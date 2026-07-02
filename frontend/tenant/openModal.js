@@ -1,5 +1,5 @@
 // Open modal
-function openModal(mode, tenantId = null) {
+async function openModal(mode, tenantId = null) {
   const modal = document.getElementById("tenantModal");
   const modalTitle = document.getElementById("modalTitle");
   const form = document.getElementById("tenantForm");
@@ -8,24 +8,24 @@ function openModal(mode, tenantId = null) {
     modalTitle.textContent = "Add New Tenant";
     form.reset();
     editingTenant = null;
+
     // Set default dates
     const today = new Date();
     const oneYearLater = new Date(today);
     oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+    document.getElementById("leaseStartDate").value = today.toISOString().split("T")[0];
+    document.getElementById("leaseEndDate").value = oneYearLater.toISOString().split("T")[0];
 
-    document.getElementById("leaseStartDate").value = today
-      .toISOString()
-      .split("T")[0];
-    document.getElementById("leaseEndDate").value = oneYearLater
-      .toISOString()
-      .split("T")[0];
   } else if (mode === "editTenant") {
     modalTitle.textContent = "Edit Tenant";
     const tenant = tenants.find((t) => (t._id || t.id) === tenantId);
-    if (tenant) {
-      populateForm(tenant);
-      editingTenant = tenant;
+    if (!tenant) {
+      showNotification("Tenant data not found. Please refresh the page.", "error");
+      return;
     }
+    // Await form population so units are loaded before the modal appears
+    await populateForm(tenant);
+    editingTenant = tenant;
   }
 
   modal.classList.add("active");

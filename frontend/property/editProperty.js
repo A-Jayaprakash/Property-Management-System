@@ -1,4 +1,4 @@
-function editProperty(id) {
+async function editProperty(id) {
   const property = properties.find((p) => p._id === id);
   if (!property) return;
 
@@ -26,6 +26,10 @@ function editProperty(id) {
   document.getElementById("propertyLocality").value = property.locality || "";
   document.getElementById("propertyType").value = property.type;
   document.getElementById("unitCount").value = property.unitCount;
+
+  // Re-render amenity checkboxes with saved values pre-checked
+  const saved = property.amenities || [];
+  await loadPropertyAmenities(saved);
 
   document.getElementById("propertyModal").style.display = "block";
 }

@@ -19,9 +19,13 @@ const propertySchema = Joi.object({
     "string.base": "Locality must be a string",
     "string.max": "Locality must not exceed 100 characters",
   }),
-  type: Joi.string().required().messages({
-    "any.required": "Type is required",
-  }),
+  type: Joi.string()
+    .valid("Apartment", "House", "Condo", "Villa", "Studio", "Penthouse", "Commercial")
+    .required()
+    .messages({
+      "any.required": "Type is required",
+      "any.only":     "Type must be one of: Apartment, House, Condo, Villa, Studio, Penthouse, Commercial",
+    }),
   unitCount: Joi.number().integer().min(1).max(10000).required().messages({
     "number.base": "Unit count must be a number",
     "number.integer": "Unit count must be a whole number",
@@ -29,7 +33,12 @@ const propertySchema = Joi.object({
     "number.max": "Unit count must not exceed 10000",
     "any.required": "Unit count is required",
   }),
-  createdBy: Joi.string().optional().allow(null), // Optional field for user reference
+  // Amenity list is now configurable by admin — accept any non-empty string
+  amenities: Joi.array()
+    .items(Joi.string().min(1).max(80))
+    .optional()
+    .default([]),
+  createdBy: Joi.string().optional().allow(null),
 });
 
 // Function to validate a property object against the defined schema
