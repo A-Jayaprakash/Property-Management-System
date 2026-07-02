@@ -50,10 +50,11 @@ test.describe.serial("Unit Management", () => {
     await page.fill("#unit_number", "E2E-201");
     await page.selectOption("#property", state.propertyId);
     await page.waitForTimeout(500); // wait for capacity info to update
-    await page.selectOption("#type",     "2BHK");
-    await page.fill("#floor",  "2");
-    await page.fill("#rent",   "15000");
-    await page.selectOption("#status", "available");
+    await page.selectOption("#type", "2BHK");
+    await page.fill("#floor",            "2");
+    await page.fill("#area",             "650");
+    await page.fill("#rent",             "15000");
+    await page.fill("#security_deposit", "30000");
 
     await page.click('button[type="submit"], #unitForm button[type="submit"]');
 

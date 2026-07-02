@@ -6,11 +6,35 @@
  */
 
 const { test, expect } = require("../fixtures");
+const fs   = require("fs");
+const path = require("path");
 
 const PROP_NAME    = "E2E_CRUD_Property";
 const PROP_UPDATED = "E2E_CRUD_Property_Edited";
 
+function loadState() {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, "../.test-state.json"), "utf8"));
+}
+
 test.describe.serial("Property Management", () => {
+  // ── Pre-cleanup: remove CRUD leftovers from any previous crashed run ──────
+  test.beforeAll(async () => {
+    const { token, baseUrl } = loadState();
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+
+    const res  = await fetch(`${baseUrl}/api/properties`, { headers });
+    const data = await res.json();
+    const list = Array.isArray(data) ? data : (data.properties || data.data || []);
+
+    for (const name of [PROP_NAME, PROP_UPDATED]) {
+      const prop = list.find((x) => x.name === name);
+      if (prop) {
+        await fetch(`${baseUrl}/api/properties/${prop._id}`, { method: "DELETE", headers });
+        console.log(`[02-properties] Pre-cleanup: deleted leftover "${name}"`);
+      }
+    }
+  });
+
   // ── Page load ─────────────────────────────────────────────────────────────
   test("index.html loads property list and header", async ({ authPage: page }) => {
     await page.goto("/index.html");
@@ -36,17 +60,15 @@ test.describe.serial("Property Management", () => {
     await page.fill("#propertyAddress",  "42 E2E Street, Test City");
     await page.fill("#propertyLocality", "E2E Locality");
     await page.selectOption("#propertyType", "Apartment");
+    await page.fill("#unitCount", "3");
 
     await page.click('button[type="submit"], #propertyForm button[type="submit"]');
 
-    // Success message OR modal closes → property appears in list
-    await expect(
-      page.locator("#successMessage, .success, #propertyModal")
-    ).toSatisfy(async (loc) => {
-      const successVisible = await page.locator("#successMessage").isVisible().catch(() => false);
-      const modalHidden    = !(await page.locator("#propertyModal").isVisible().catch(() => true));
-      return successVisible || modalHidden;
-    }, { timeout: 8000 });
+    // Wait for modal to close (success) OR success message to appear
+    await Promise.race([
+      page.locator("#propertyModal").waitFor({ state: "hidden",  timeout: 8000 }),
+      page.locator("#successMessage").waitFor({ state: "visible", timeout: 8000 }),
+    ]);
 
     // The new property card should appear
     await expect(page.locator(`text="${PROP_NAME}"`)).toBeVisible({ timeout: 8000 });
@@ -65,13 +87,18 @@ test.describe.serial("Property Management", () => {
 
   test("search with non-existent name shows empty state or no matching card", async ({ authPage: page }) => {
     await page.goto("/index.html");
-    await page.locator("#propertiesContainer").waitFor({ state: "visible", timeout: 8000 });
+    // Wait for at least one property card — proves loadProperties() finished.
+    // Searching before this causes a race: search fires on properties=[], then
+    // loadProperties() re-renders all cards after the search clears them.
+    await page.locator(".property-card").first().waitFor({ state: "visible", timeout: 8000 });
 
     await page.fill("#searchInput", "zzz_no_such_property_xyz");
-    await page.waitForTimeout(600);
 
-    const cards = page.locator(".property-card");
-    await expect(cards).toHaveCount(0, { timeout: 5000 });
+    // renderProperties([]) replaces innerHTML entirely, so .property-card count → 0.
+    await page.waitForFunction(
+      () => document.querySelectorAll(".property-card").length === 0,
+      { timeout: 5000 }
+    );
   });
 
   // ── Edit property ─────────────────────────────────────────────────────────

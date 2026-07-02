@@ -53,10 +53,10 @@ test.describe.serial("Tenant Management", () => {
     await page.selectOption("#propertySelect", state.propertyId);
     await page.waitForTimeout(800); // units load asynchronously
 
-    // Select the shared E2E-101 unit
-    await page.selectOption("#assignedUnit", state.unitId);
+    // Option value is unit_number string, not the MongoDB _id
+    await page.selectOption("#assignedUnit", "E2E-101");
 
-    await page.selectOption("#status", "active");
+    await page.selectOption("#status", "Active");
     await page.fill("#monthlyRent",     TENANT.rent);
     await page.fill("#leaseStartDate",  TENANT.start);
     await page.fill("#leaseEndDate",    TENANT.end);

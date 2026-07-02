@@ -1,16 +1,21 @@
 /**
  * global-setup.js — runs once before the entire test suite.
  *
- * 1. Registers the E2E test manager account (idempotent — ignores 400 if it exists).
- * 2. Logs in and captures the JWT.
- * 3. Creates a shared test Property and Unit via the API.
- * 4. Writes everything to .test-state.json for fixtures to consume.
+ * Fully idempotent: if a previous run crashed before teardown, the existing
+ * E2E_Property / E2E-101 unit are reused instead of recreated.
+ *
+ * Order:
+ * 1. Register the E2E manager account (ignores 400 if already exists).
+ * 2. Login and capture JWT.
+ * 3. Get-or-create test Property.
+ * 4. Get-or-create test Unit inside that property.
+ * 5. Write .test-state.json for fixtures to consume.
  */
 
 const fs   = require("fs");
 const path = require("path");
 
-const BASE_URL  = process.env.TEST_BASE_URL || "http://localhost:3000";
+const BASE_URL   = process.env.TEST_BASE_URL || "http://localhost:3000";
 const STATE_FILE = path.join(__dirname, ".test-state.json");
 
 const TEST_USER = {
@@ -21,6 +26,16 @@ const TEST_USER = {
   password: "E2eTest@Secure1",
   role:     "manager",
 };
+
+const PROP_NAME    = "E2E_Property";
+const UNIT_NUMBER  = "E2E-101";
+
+async function get(url, token) {
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return res.json();
+}
 
 async function post(url, body, token) {
   const headers = { "Content-Type": "application/json" };
@@ -47,27 +62,88 @@ async function globalSetup() {
   }
   const { token, user } = loginData;
 
-  // 3 — Create test Property
-  const propData = await post(
-    `${BASE_URL}/api/properties`,
-    { name: "E2E_Property", address: "1 Test Lane, Test City", locality: "Test Locality", type: "Apartment" },
-    token
-  );
-  const propertyId   = propData._id;
-  const propertyName = propData.name;
-  if (!propertyId) throw new Error(`[global-setup] Property creation failed: ${JSON.stringify(propData)}`);
+  // 3 — Get-or-create test Property
+  let propertyId, propertyName;
+  {
+    const createData = await post(
+      `${BASE_URL}/api/properties`,
+      { name: PROP_NAME, address: "1 Test Lane, Test City", locality: "Test Locality", type: "Apartment", unitCount: 5 },
+      token
+    );
 
-  // 4 — Create test Unit inside that property
-  const unitData = await post(
-    `${BASE_URL}/api/units`,
-    { unit_number: "E2E-101", property: propertyId, type: "1BHK", floor: 1, rent: 10000, status: "available" },
-    token
-  );
-  const unitId = unitData._id;
-  if (!unitId) throw new Error(`[global-setup] Unit creation failed: ${JSON.stringify(unitData)}`);
+    if (createData._id) {
+      // Created fresh
+      propertyId   = createData._id;
+      propertyName = createData.name;
+      console.log(`[global-setup] Created property ${propertyId}`);
+    } else {
+      // Already exists — find it in the list
+      const all = await get(`${BASE_URL}/api/properties`, token);
+      const list = Array.isArray(all) ? all : (all.data || []);
+      const existing = list.find((p) => p.name === PROP_NAME);
+      if (!existing) {
+        throw new Error(`[global-setup] Property creation failed and not found: ${JSON.stringify(createData)}`);
+      }
+      propertyId   = existing._id;
+      propertyName = existing.name;
+      console.log(`[global-setup] Reusing existing property ${propertyId}`);
+    }
+  }
 
-  // 5 — Persist state
-  const state = { token, user, baseUrl: BASE_URL, propertyId, propertyName, unitId };
+  // 4 — Get-or-create test Unit
+  let unitId;
+  {
+    const createData = await post(
+      `${BASE_URL}/api/units`,
+      { unit_number: UNIT_NUMBER, property: propertyId, type: "1BHK", floor: 1, area: 500, rent: 10000, security_deposit: 20000, status: "available" },
+      token
+    );
+
+    if (createData._id) {
+      unitId = createData._id;
+      console.log(`[global-setup] Created unit ${unitId}`);
+    } else {
+      // Already exists — look it up by property
+      const propUnits = await get(`${BASE_URL}/api/units/property/${propertyId}`, token);
+      const list = Array.isArray(propUnits) ? propUnits : (propUnits.units || []);
+      const existing = list.find((u) => u.unit_number === UNIT_NUMBER);
+      if (!existing) {
+        throw new Error(`[global-setup] Unit creation failed and not found: ${JSON.stringify(createData)}`);
+      }
+      unitId = existing._id;
+      console.log(`[global-setup] Reusing existing unit ${unitId}`);
+    }
+  }
+
+  // 5 — Get-or-create tenant user for RBAC tests
+  const TENANT_USER = {
+    name:     "E2E Tenant User",
+    username: "e2e_test_tnt",
+    email:    "e2e_tnt@propertysync.dev",
+    phone:    "9111111111",
+    password: "E2eTest@Secure1",
+    role:     "tenant",
+  };
+
+  await fetch(`${BASE_URL}/api/auth/register`, {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(TENANT_USER),
+  });
+
+  const tenantLogin = await post(`${BASE_URL}/api/auth/login`, {
+    username: TENANT_USER.username,
+    password: TENANT_USER.password,
+  });
+  if (!tenantLogin.token) {
+    throw new Error(`[global-setup] Tenant login failed: ${JSON.stringify(tenantLogin)}`);
+  }
+  const tenantToken = tenantLogin.token;
+  const tenantUser  = tenantLogin.user;
+  console.log("[global-setup] Tenant user ready");
+
+  // 6 — Persist state
+  const state = { token, user, tenantToken, tenantUser, baseUrl: BASE_URL, propertyId, propertyName, unitId };
   fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2));
   console.log(`[global-setup] State written → propertyId=${propertyId}  unitId=${unitId}`);
 }

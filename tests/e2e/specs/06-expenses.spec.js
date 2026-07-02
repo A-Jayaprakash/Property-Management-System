@@ -37,7 +37,7 @@ test.describe.serial("Expense Tracking", () => {
     await expect(page.locator("#expenseTitle")).toBeVisible({ timeout: 8000 });
     await expect(page.locator("#selMonth")).toBeVisible();
     await expect(page.locator("#selYear")).toBeVisible();
-    await expect(page.locator("button:has-text('Load Expenses')")).toBeVisible();
+    await expect(page.locator("button[onclick='loadExpenses()']")).toBeVisible();
   });
 
   // ── Load expense period ───────────────────────────────────────────────────
@@ -52,7 +52,7 @@ test.describe.serial("Expense Tracking", () => {
 
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
 
     await expect(page.locator("#periodStatusBadge")).toBeVisible({ timeout: 8000 });
     await expect(page.locator("#periodStatusBadge")).toContainText(/draft/i);
@@ -69,7 +69,7 @@ test.describe.serial("Expense Tracking", () => {
     );
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
 
     await expect(page.locator("#expenseContent")).toBeVisible({ timeout: 8000 });
     // Property expense total field should exist
@@ -86,7 +86,7 @@ test.describe.serial("Expense Tracking", () => {
     );
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
     await page.locator("#expenseContent").waitFor({ state: "visible", timeout: 8000 });
 
     // Enter into the misc property expense field
@@ -108,7 +108,7 @@ test.describe.serial("Expense Tracking", () => {
     );
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
     await page.locator("#expenseActions").waitFor({ state: "visible", timeout: 8000 });
 
     await page.click("#btnSave");
@@ -126,7 +126,7 @@ test.describe.serial("Expense Tracking", () => {
     );
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
     await page.locator("#expenseActions").waitFor({ state: "visible", timeout: 8000 });
 
     page.on("dialog", (d) => d.accept());
@@ -147,7 +147,7 @@ test.describe.serial("Expense Tracking", () => {
     );
     await page.selectOption("#selMonth", TEST_MONTH);
     await page.fill("#selYear", TEST_YEAR);
-    await page.click("button:has-text('Load Expenses')");
+    await page.click("button[onclick='loadExpenses()']");
     await page.locator("#expenseContent").waitFor({ state: "visible", timeout: 8000 });
 
     const finalBtn  = page.locator("#btnFinalize");

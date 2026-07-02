@@ -125,8 +125,9 @@ test.describe.serial("Configuration", () => {
     await page.click("#tbtn_propExpenses");
     await page.locator("#tbody_propExpenses").waitFor({ state: "visible", timeout: 8000 });
 
+    // Verify at least two seeded property expense types are present
     await expect(page.locator("#tbody_propExpenses")).toContainText(/Property Tax/i);
-    await expect(page.locator("#tbody_propExpenses")).toContainText(/Building Maintenance/i);
+    await expect(page.locator("#tbody_propExpenses")).toContainText(/Water Tax/i);
   });
 
   // ── Cleanup test entries via API ──────────────────────────────────────────
