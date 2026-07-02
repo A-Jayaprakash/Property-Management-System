@@ -25,21 +25,21 @@ const authRoutes = require("./routes/authRoutes");
 const app = express();
 app.use(express.json());
 
-// CORS: allow local dev and optionally any deployed frontend domain(s)
+// CORS: allow local dev and any *.onrender.com subdomain (covers redeployments)
 const allowedOrigins = [
   "http://localhost:3000",
   "http://127.0.0.1:5500",
   "http://localhost:5500",
   "http://127.0.0.1:3000",
   "http://localhost:8080",
-  "https://property-management-system-2.onrender.com",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow no-origin requests (e.g., curl, server-to-server) and whitelisted origins
-      if (!origin || allowedOrigins.includes(origin)) {
+      // Allow no-origin requests (e.g., curl, server-to-server), local dev origins,
+      // and any onrender.com subdomain so redeployments never need a CORS update
+      if (!origin || allowedOrigins.includes(origin) || /\.onrender\.com$/.test(origin)) {
         return callback(null, true);
       }
       return callback(new Error("Not allowed by CORS"));
